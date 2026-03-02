@@ -1,0 +1,167 @@
+{% extends 'usuarios/dashboard.html' %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <!-- ENCABEZADO -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="tech-title h2 text-white mb-1">
+                Panel de Usuarios
+            </h1>
+            <p class="text-white-50">
+                Gestión y administración de los usuarios de USBTech SPA
+            </p>
+        </div>
+        <a href="{% url 'registrar_usuario' %}" class="btn btn-primary shadow-sm">
+            <i class="bi bi-person-plus-fill"></i> NUEVO USUARIO
+        </a>
+    </div>
+
+    <!-- TARJETA -->
+    <div class="card border-0 shadow-lg p-4"
+         style="background: rgba(255, 255, 255, 0.9); border-radius: 20px;">
+
+        <div class="table-responsive">
+    <table class="table table-hover align-middle">
+
+        <thead class="table-dark">
+            <tr style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem;">
+                <th class="ps-4">USUARIO</th>
+                <th>EMAIL</th>
+                <th>ROL</th> <th class="text-center">ACTIVO</th>
+                <th class="text-center">ACCIONES</th>
+            </tr>
+        </thead>
+
+        <tbody class="text-dark">
+            {% for user in usuarios %}
+            <tr>
+                <td class="ps-4">
+                    <div class="fw-bold text-primary">{{ user.username }}</div>
+                </td>
+                <td>{{ user.email|default:"---" }}</td>
+                
+                <td>
+                    {% if user.is_superuser or user.perfil.tipo_usuario == 'admin' or user.perfil.tipo_usuario == 'administracion' %}
+                        <span class="badge bg-primary text-uppercase" style="font-size: 0.7rem;">
+                            Administración
+                        </span>
+                    {% elif user.perfil.tipo_usuario == 'taller' %}
+                        <span class="badge bg-warning text-dark text-uppercase" style="font-size: 0.7rem;">
+                            Taller
+                        </span>
+                    {% elif user.perfil.tipo_usuario == 'diseno' or user.perfil.tipo_usuario == 'diseño' %}
+                        <span class="badge bg-info text-dark text-uppercase" style="font-size: 0.7rem;">
+                            Diseño
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary text-uppercase" style="font-size: 0.7rem;">
+                            {{ user.perfil.tipo_usuario|default:"Sin Rol" }}
+                        </span>
+                    {% endif %}
+                </td>
+
+                <td class="text-center">
+                    {% if user.is_active %}
+                        <a href="{% url 'toggle_usuario' user.pk %}" 
+                        class="btn btn-sm btn-danger px-3 rounded-pill" style="font-size: 0.7rem;">
+                            Desactivar
+                        </a>
+                    {% else %}
+                        <a href="{% url 'toggle_usuario' user.pk %}" 
+                        class="btn btn-sm btn-success px-3 rounded-pill" style="font-size: 0.7rem;">
+                            Activar
+                        </a>
+                    {% endif %}
+                </td>
+
+                <td class="text-center">
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'editar_usuario' user.pk %}"
+                           title="Editar"
+                           class="btn btn-outline-secondary btn-sm border-0">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+
+                        <a href="{% url 'eliminar_usuario' user.pk %}"
+                           title="Eliminar"
+                           class="btn btn-outline-danger btn-sm border-0"
+                           onclick="return confirm('¿Estás seguro de eliminar este usuario?')">
+                            <i class="bi bi-trash3-fill"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center py-5">
+                    <i class="bi bi-people text-light-emphasis display-1"></i>
+                    <p class="mt-3 text-muted">No hay usuarios registrados en la base de datos.</p>
+                </td>
+            </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
+</div>
+</div>
+
+<!-- ESTILOS -->
+<style>
+    .table thead th {
+        border: none;
+        letter-spacing: 1px;
+    }
+    .table tbody td {
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 15px 10px;
+    }
+    .btn-group .btn:hover {
+        background-color: rgba(13, 110, 253, 0.1);
+        transform: scale(1.1);
+    }
+</style>
+
+<!-- SweetAlert2 GLOBAL -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+{% if messages %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    let errores = "";
+    let exitos = "";
+
+    {% for message in messages %}
+        {% if message.tags == "error" %}
+            errores += "• {{ message|escapejs }}<br>";
+        {% elif message.tags == "success" %}
+            exitos += "{{ message|escapejs }}";
+        {% endif %}
+    {% endfor %}
+
+    if (errores !== "") {
+        Swal.fire({
+            icon: "error",
+            title: "Error",
+            html: errores,
+            confirmButtonText: "Aceptar"
+        });
+    }
+
+    if (exitos !== "") {
+        Swal.fire({
+            icon: "success",
+            title: "Éxito",
+            text: exitos,
+            confirmButtonText: "Aceptar"
+        });
+    }
+
+});
+</script>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends 'usuarios/dashboard.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-7 col-md-9">
+
+            <div class="card border-0 shadow-lg p-4"
+                 style="background: rgba(255,255,255,0.95); border-radius: 25px;">
+
+                <!-- TITULO -->
+                <div class="text-center mb-4">
+
+                    <h2 class="tech-title text-dark">
+                        Editar Usuario
+                    </h2>
+
+                    <p class="text-muted mb-0">
+                        Modifique los datos del usuario
+                    </p>
+
+                </div>
+
+
+                <!-- FORM -->
+                <form method="POST">
+
+                    {% csrf_token %}
+
+                    {{ form|crispy }}
+
+
+                    <!-- BOTONES -->
+                    <div class="d-flex justify-content-between mt-4">
+
+                        <a href="{% url 'lista_usuarios' %}"
+                           class="btn btn-outline-secondary">
+
+                            <i class="bi bi-arrow-left"></i> Volver
+                        </a>
+
+
+                        <button type="submit"
+                                class="btn btn-primary px-4">
+
+                            <i class="bi bi-save"></i> Guardar Cambios
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- SWEETALERT -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+{% if messages %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    let errores = "";
+    let exitos = "";
+
+    {% for message in messages %}
+        {% if message.tags == "error" %}
+            errores += "• {{ message|escapejs }}<br>";
+        {% elif message.tags == "success" %}
+            exitos += "{{ message|escapejs }}";
+        {% endif %}
+    {% endfor %}
+
+    if (errores !== "") {
+        Swal.fire({
+            icon: "error",
+            title: "Error",
+            html: errores,
+            confirmButtonText: "Aceptar"
+        });
+    }
+
+    if (exitos !== "") {
+        Swal.fire({
+            icon: "success",
+            title: "Éxito",
+            text: exitos,
+            confirmButtonText: "Aceptar"
+        });
+    }
+
+});
+</script>
+{% endif %}
+
+{% endblock %}

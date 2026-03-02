@@ -1,0 +1,48 @@
+from django.urls import path
+from .views import login_usuario, dashboard, dashboard_taller
+from . import views
+
+urlpatterns = [
+
+    path('dashboard/', views.dashboard, name='dashboard'),
+    path('usuarios/', views.lista_usuarios, name='lista_usuarios'),
+    path('usuarios/nuevo/', views.registrar_usuario, name='registrar_usuario'),
+    path('usuarios/editar/<int:pk>/', views.editar_usuario, name='editar_usuario'),
+    path('usuarios/eliminar/<int:pk>/', views.eliminar_usuario, name='eliminar_usuario'),
+    path('usuarios/toggle/<int:pk>/', views.toggle_usuario, name='toggle_usuario'),
+    path('dashboard/taller/', views.dashboard_taller, name='dashboard_taller'),
+    path('redirect/', views.login_redirect, name='login_redirect'),   
+    path('proceso/editar/<int:pk>/', views.editar_proceso, name='editar_proceso'),
+    path('dashboard/stock/', views.stock_view, name='stock_interno'),
+    path('stock/actualizar/', views.actualizar_stock_ajax, name='actualizar_stock_ajax'),
+    path('articulos/', views.lista_articulos, name= 'lista_articulos'),
+    path('servicios/', views.lista_servicios, name= 'lista_servicios'),
+    path('articulos/nuevo/', views.crear_articulo, name='crear_articulo'),
+    path('articulos/editar/<int:pk>/', views.editar_articulo, name='editar_articulo'),
+    path('articulos/eliminar/<int:pk>/', views.eliminar_articulo, name='eliminar_articulo'),
+    path('servicios/', views.lista_servicios, name='lista_servicios'),
+    path('servicios/nuevo/', views.crear_servicio, name='crear_servicio'),
+    path('servicios/editar/<int:pk>/', views.editar_servicio, name='editar_servicio'),
+    path('servicios/eliminar/<int:pk>/', views.eliminar_servicio, name='eliminar_servicio'),
+    path('cotizaciones/', views.menu_cotizaciones, name='menu_cotizaciones'),
+    path('cotizaciones/servicios/nuevo', views.cotizar_servicio_nuevo, name='cotizar_servicio_nuevo'),
+    path('cotizaciones/articulos/nuevo/', views.cotizar_articulos_nuevo, name='cotizar_articulos_nuevo'),
+    path('cotizaciones/articulos/nuevo/', views.cotizar_articulos_nuevo, name='cotizar_articulo'),
+    path('cotizaciones/articulos/lista/', views.lista_cotizaciones_articulos, name='lista_cotizaciones_articulos'),
+    path('cotizaciones/articulos/guardar/', views.guardar_cotizacion_articulo, name='guardar_cotizacion_articulo'),
+    path('cotizaciones/articulos/pdf/<int:pk>/', views.generar_pdf_cotizacion, name='generar_pdf_cotizacion'),
+    path('cotizaciones/servicios/', views.lista_cotizaciones_servicios, name='lista_cotizaciones_servicios'),
+    path('stock/crear/', views.crear_material_ajax, name='crear_material_ajax'),
+    path('stock/eliminar/<int:pk>/', views.eliminar_material, name='eliminar_material'),
+    path('cotizaciones/servicios/pdf/<int:pk>/', views.generar_pdf_cotizacion_servicio, name='generar_pdf_cotizacion_servicio'),
+    path('dashboard/diseno/', views.dashboard_diseno, name='dashboard_diseno'),
+    path('proceso/pasar-a-taller/<int:pk>/', views.pasar_a_taller, name='pasar_a_taller'),
+    path('diseno/editar/<int:pk>/', views.editar_proceso_diseno, name='editar_proceso_diseno'),
+    path('taller/finalizar/<int:pk>/', views.finalizar_taller, name='finalizar_taller'),
+    path('proceso/enviar-admin/<int:pk>/', views.enviar_a_admin, name='enviar_a_admin'),
+    path('proceso/cerrar/<int:pk>/', views.cerrar_proceso_final, name='cerrar_proceso_final'),
+    path('historial-acciones/', views.lista_acciones, name='lista_acciones'),
+    path('proceso/crear-admin/', views.crear_proceso_admin, name='crear_proceso_admin'),
+    path('stock/editar-nombre/', views.editar_material_nombre_ajax, name='editar_material_nombre_ajax'),
+    
+]

@@ -1,0 +1,17 @@
+{% extends 'usuarios/dashboard.html' %}
+
+{% block content %}
+<div class="container-fluid text-white">
+    <div class="card bg-dark border-danger p-5 shadow-lg">
+        <h2 class="tech-title text-danger">¿Estás seguro?</h2>
+        <p class="lead">Estás a punto de eliminar al cliente: <strong>{{ cliente.nombre }}</strong></p>
+        <p class="text-white-50 small">Esta acción no se puede deshacer.</p>
+        
+        <form method="POST">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger px-4">SÍ, ELIMINAR</button>
+            <a href="{% url 'lista_clientes' %}" class="btn btn-secondary px-4 ms-2">CANCELAR</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

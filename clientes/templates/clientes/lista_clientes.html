@@ -1,0 +1,141 @@
+{% extends 'usuarios/dashboard.html' %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="tech-title h2 text-white mb-1">
+                Panel de Clientes
+            </h1>
+            <p class="text-white-50">
+                Gestión y administración de registros de USBTech SPA
+            </p>
+        </div>
+        
+        <div class="d-flex gap-2">
+            {% if tipo_usuario != 'taller' %}
+                <a href="{% url 'procesos_clientes' %}" class="btn btn-outline-light shadow-sm">
+                    <i class="bi bi-gear-fill"></i> PROCESOS CLIENTES
+                </a>
+                
+                <a href="{% url 'registrar_cliente' %}" class="btn btn-primary shadow-sm">
+                    <i class="bi bi-person-plus-fill"></i> NUEVO CLIENTE
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-lg p-4"> <form method="get" class="mb-4">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-4">
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-primary text-white">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text"
+                               name="buscar"
+                               class="form-control"
+                               placeholder="Buscar por RUT..."
+                               value="{{ buscar|default:'' }}">
+                    </div>
+                </div>
+
+                <div class="col-md-auto">
+                    <button type="submit" class="btn btn-primary shadow-sm">
+                        Buscar
+                    </button>
+
+                    {% if buscar %}
+                    <a href="{% url 'lista_clientes' %}" class="btn btn-outline-secondary ms-2">
+                        Limpiar
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                    <tr style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem;">
+                        <th class="ps-4">CLIENTE</th>
+                        <th>GIRO / RUT</th>
+                        <th>CORREO</th>
+                        <th>TELÉFONO</th>
+                        <th>COND. PAGO</th>
+                        <th class="text-center">ACCIONES</th>
+                    </tr>
+                </thead>
+
+                <tbody class="text-dark">
+                    {% for cliente in clientes %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-bold text-primary">
+                                {{ cliente.razon_social }}
+                            </div>
+                            <small class="text-muted">
+                                {{ cliente.direccion }}
+                            </small>
+                        </td>
+
+                        <td>
+                            <div>{{ cliente.giro }}</div>
+                            <small class="text-muted">
+                                RUT: {{ cliente.rut }}
+                            </small>
+                        </td>
+
+                        <td>{{ cliente.correo }}</td>
+
+                        <td>{{ cliente.telefono|default:"---" }}</td>
+
+                        <td>{{ cliente.get_condiciones_pago_display }}</td>
+
+                        <td class="text-center">
+                            <div class="btn-group" role="group">
+                                {% if tipo_usuario != 'taller' %}
+                                    <a href="{% url 'editar_cliente' cliente.pk %}" class="btn btn-outline-secondary btn-sm border-0" title="Editar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <a href="{% url 'eliminar_cliente' cliente.pk %}" class="btn btn-outline-danger btn-sm border-0" title="Eliminar">
+                                        <i class="bi bi-trash3-fill"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <i class="bi bi-people text-light-emphasis display-1"></i>
+                            <p class="mt-3 text-muted">
+                                No hay clientes registrados en la base de datos.
+                            </p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table thead th {
+        border: none;
+        letter-spacing: 1px;
+    }
+
+    .table tbody td {
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 15px 10px;
+    }
+
+    .btn-group .btn:hover {
+        background-color: rgba(13, 110, 253, 0.1);
+        transform: scale(1.1);
+    }
+</style>
+{% endblock %}

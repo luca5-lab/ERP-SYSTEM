@@ -1,0 +1,126 @@
+{% extends 'usuarios/dashboard.html' %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="tech-title h2 text-white mb-1">Historial de Cotizaciones</h1>
+            <p class="text-white-50">Registro de presupuestos de artículos realizados.</p>
+        </div>
+        <a href="{% url 'cotizar_articulos_nuevo' %}" class="btn btn-primary rounded-pill px-4 shadow">
+            <i class="bi bi-plus-lg me-2"></i> NUEVA COTIZACIÓN
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-lg p-4">
+        
+        <form method="get" class="mb-4">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-3">
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-primary text-white">
+                            <i class="bi bi-hash"></i>
+                        </span>
+                        <input type="text" name="n_presupuesto" class="form-control" 
+                               placeholder="N° Presupuesto..." value="{{ request.GET.n_presupuesto }}">
+                    </div>
+                </div>
+
+                <div class="col-md-5">
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-primary text-white">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" name="cliente" class="form-control" 
+                               placeholder="Buscar por cliente..." value="{{ request.GET.cliente }}">
+                    </div>
+                </div>
+
+                <div class="col-md-auto">
+                    <button type="submit" class="btn btn-primary shadow-sm">
+                        Buscar
+                    </button>
+
+                    {% if request.GET.n_presupuesto or request.GET.cliente %}
+                    <a href="{% url 'lista_cotizaciones_articulos' %}" class="btn btn-outline-secondary ms-2">
+                        Limpiar
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                    <tr style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem;">
+                        <th class="ps-4">N° PRESUPUESTO</th>
+                        <th>FECHA INGRESO</th>
+                        <th>CLIENTE</th>
+                        <th>ARTÍCULOS (ID - DESCRIPCIÓN)</th>
+                        <th class="text-center">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody class="text-dark bg-white">
+                    {% for c in cotizaciones %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-primary">#{{ c.n_presupuesto }}</td>
+                        <td>{{ c.fecha|date:"d/m/Y H:i" }}</td>
+                        <td>{{ c.cliente.razon_social }}</td>
+                        <td>
+                            {% for detalle in c.detalles.all %}
+                                <span class="badge bg-light text-dark border mb-1" style="font-weight: 500;">
+                                    ID:{{ detalle.articulo.id }} - {{ detalle.articulo.descripcion }}
+                                </span><br>
+                            {% empty %}
+                                <span class="text-muted small">Sin artículos</span>
+                            {% endfor %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'generar_pdf_cotizacion' c.n_presupuesto %}" 
+                               class="btn btn-outline-info btn-sm rounded-pill border-0" 
+                               target="_blank" title="Descargar PDF">
+                                <i class="bi bi-file-earmark-pdf-fill fs-5"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-folder-x display-4 d-block mb-3"></i>
+                            No se encontraron cotizaciones registradas.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table thead th {
+        border: none;
+        letter-spacing: 1px;
+    }
+
+    .table tbody td {
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 15px 10px;
+    }
+
+    .input-group-text {
+        border: none;
+    }
+
+    .form-control {
+        border: 1px solid #dee2e6;
+    }
+
+    .form-control:focus {
+        box-shadow: none;
+        border-color: #0d6efd;
+    }
+</style>
+{% endblock %}

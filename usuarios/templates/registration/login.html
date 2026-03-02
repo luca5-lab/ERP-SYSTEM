@@ -1,0 +1,34 @@
+{% extends 'usuarios/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<h2 class="text-center mb-4 tech-title" style="font-size: 1.5rem; color: #333;">
+    Iniciar Sesión
+</h2>
+
+<form method="POST">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-primary w-100 mt-3">
+        ENTRAR
+    </button>
+</form>
+
+<!-- SweetAlert2 para mensajes -->
+{% if messages %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    {% for message in messages %}
+        Swal.fire({
+            icon: "{% if 'error' in message.tags %}error{% else %}success{% endif %}",
+            title: "{% if 'error' in message.tags %}¡Atención!{% else %}Éxito{% endif %}",
+            text: "{{ message|escapejs }}",
+            confirmButtonText: "Aceptar"
+        });
+    {% endfor %}
+});
+</script>
+{% endif %}
+
+{% endblock %}

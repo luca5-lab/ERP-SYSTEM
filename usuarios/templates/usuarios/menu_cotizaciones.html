@@ -1,0 +1,34 @@
+{% extends 'usuarios/dashboard.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="tech-title text-white mb-5 text-center">MÓDULO DE COTIZACIONES</h2>
+    
+    <div class="row g-4 justify-content-center">
+        <div class="col-md-5">
+            <a href="{% url 'lista_cotizaciones_servicios' %}" class="card bg-dark border-primary shadow-lg text-decoration-none h-100 p-4 btn-tech">
+                <div class="card-body text-center">
+                    <i class="bi bi-gear-wide-connected display-1 text-primary mb-3"></i>
+                    <h3 class="text-white">Cotizar Servicios</h3>
+                    <p class="text-white-50 small">Cálculo por m² y mano de obra técnica.</p>
+                </div>
+            </a>
+    </div>
+
+        <div class="col-md-5">
+            <a href="{% url 'lista_cotizaciones_articulos' %}" class="card bg-dark border-info shadow-lg text-decoration-none h-100 p-4 btn-tech">
+                <div class="card-body text-center">
+                    <i class="bi bi-box-seam display-1 text-info mb-3"></i>
+                    <h3 class="text-white">Cotizar Artículos</h3>
+                    <p class="text-white-50 small">Venta de productos, merchandising y tecnología.</p>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-tech { transition: all 0.3s ease; border-width: 2px; }
+    .btn-tech:hover { transform: translateY(-10px); box-shadow: 0 0 20px rgba(13, 110, 253, 0.5) !important; }
+</style>
+{% endblock %}

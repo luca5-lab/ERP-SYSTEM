@@ -1,0 +1,398 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | USBTech</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --sidebar-width: 70px;
+            --sidebar-expanded: 240px;
+        }
+
+        body { 
+            background: url("{% static 'images/fondoo.jpg' %}") no-repeat center center fixed;
+            background-size: cover;
+            transition: all 0.5s;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+       
+        .sidebar {
+    width: var(--sidebar-width);
+    height: 100vh;
+    position: fixed;
+    background: rgba(6, 5, 66, 0.95); 
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    overflow-y: auto;   /* ✅ Scroll vertical */
+    overflow-x: hidden;
+
+    z-index: 1000;
+}
+
+/* Scroll moderno */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+        .sidebar:hover { 
+            width: var(--sidebar-expanded); 
+        }
+        
+        .nav-link {
+            color: rgba(255,255,255,0.7) !important;
+            display: flex;
+            align-items: center;
+            padding: 15px 25px;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+
+        .nav-link i { 
+            font-size: 20px; 
+            min-width: 40px; 
+        }
+
+        .nav-link span { 
+            opacity: 0; 
+            transition: opacity 0.3s; 
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        .sidebar:hover span { 
+            opacity: 1; 
+        }
+
+        .nav-link:hover { 
+            background: rgba(13, 110, 253, 0.2); 
+            color: white !important;
+        }
+
+        /* Contenido Principal */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 40px;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Estilo de Tarjetas del Dashboard */
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.9); 
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+        }
+
+        .tech-title {
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 2px;
+        }
+        /* Logo Sidebar */
+.logo-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 90px;
+}
+
+.sidebar-logo {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;   /* Recorta bordes vacíos */
+    transform: scale(1.3); /* Agranda el contenido */
+    border-radius: 8px;
+}
+
+/* Cuando el sidebar se expande */
+.sidebar:hover .sidebar-logo {
+    width: 210px;
+    height: 200px;
+}
+.logo-text {
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem;
+    margin-top: 5px;
+    opacity: 0;
+    transition: 0.3s;
+}
+
+.sidebar:hover .logo-text {
+    opacity: 1;
+}
+    </style>
+</head>
+<body>
+
+    <div class="sidebar shadow">
+    <div class="logo-container flex-column">
+        <img src="{% static 'images/logo.png' %}" alt="Logo" class="sidebar-logo">
+    </div>
+        
+    <nav class="nav flex-column mt-2">
+    <a href="{% url 'login_redirect' %}" class="nav-link">
+        <i class="bi bi-house-door"></i> <span>Inicio</span>
+    </a>
+
+    <hr class="mx-3 text-secondary">
+
+    {% with tipo_usuario=request.user.perfil.tipo_usuario %}
+    
+    {% if request.user.is_superuser or tipo_usuario == 'administracion' %}
+        <a href="{% url 'menu_cotizaciones' %}" class="nav-link">
+            <i class="bi bi-file-text"></i> <span>Cotizaciones</span>
+        </a>
+        <a href="#" class="nav-link"><i class="bi bi-receipt"></i> <span>Orden de Compra</span></a>
+        <a href="#" class="nav-link"><i class="bi bi-credit-card"></i> <span>Facturas</span></a>
+
+        <hr class="mx-3 text-secondary">
+        
+        <a href="{% url 'lista_clientes' %}" class="nav-link"><i class="bi bi-people-fill"></i> <span>Clientes</span></a>
+        <a href="{% url 'lista_proveedores' %}" class="nav-link"><i class="bi bi-truck"></i> <span>Proveedores</span></a>
+
+        <hr class="mx-3 text-secondary">
+
+        <a href="{% url 'lista_articulos' %}" class="nav-link"><i class="bi bi-box-seam"></i> <span>Artículos</span></a>
+        <a href="{% url 'lista_servicios' %}" class="nav-link"><i class="bi bi-tools"></i> <span>Servicios</span></a>
+        <a href="{% url 'stock_interno' %}" class="nav-link"><i class="bi bi-boxes"></i> <span>Stock interno</span></a>
+
+        <hr class="mx-3 text-secondary">
+
+        <a href="{% url 'informes' %}" class="nav-link"><i class="bi bi-bar-chart-line"></i> <span>Informes</span></a>
+        <a href="#" class="nav-link"><i class="bi bi-bag-plus"></i> <span>Compras</span></a>
+        <a href="#" class="nav-link"><i class="bi bi-cart-check"></i> <span>Ventas</span></a>
+
+        <hr class="mx-3 text-secondary">
+
+        <a href="{% url 'lista_usuarios' %}" class="nav-link"><i class="bi bi-person-gear"></i> <span>Usuarios</span></a>
+        <a href="{% url 'lista_acciones' %}" class="nav-link"><i class="bi bi-person-gear"></i> <span>Historial acciones</span></a>
+
+    {% elif tipo_usuario == 'taller' %}
+        <a href="{% url 'dashboard_taller' %}" class="nav-link">
+            <i class="bi bi-cpu"></i> <span>Producción Taller</span>
+        </a>
+        <a href="{% url 'stock_interno' %}" class="nav-link">
+            <i class="bi bi-boxes"></i> <span>Stock interno</span>
+        </a>
+        <hr class="mx-3 text-secondary">
+        <a href="{% url 'lista_clientes' %}" class="nav-link"><i class="bi bi-people-fill"></i> <span>Clientes</span></a>
+        <a href="{% url 'lista_proveedores' %}" class="nav-link"><i class="bi bi-truck"></i> <span>Proveedores</span></a>
+
+    {% elif tipo_usuario == 'diseno' or tipo_usuario == 'diseño' %}
+        <a href="{% url 'login_redirect' %}" class="nav-link">
+            <i class="bi-clipboard-data"></i> <span>Centro de Procesos</span>
+        </a>
+
+    {% endif %}
+    {% endwith %}
+
+    <hr class="mx-3 text-secondary">
+    <form action="{% url 'logout' %}" method="post">
+        {% csrf_token %}
+        <button type="submit" class="nav-link bg-transparent border-0 w-100 text-start">
+            <i class="bi bi-box-arrow-right text-danger"></i>
+            <span>Cerrar Sesión</span>
+        </button>
+    </form>
+</nav>
+</div>
+
+     <div class="main-content">
+    <div class="container-fluid">
+        {% block content %}
+        <div class="card dashboard-card border-0 shadow-lg p-5">
+    <div class="d-flex align-items-center justify-content-between">
+        <h1 class="display-5 fw-bold text-dark tech-title mb-0">¡HOLA, {{ user.username }}!</h1>
+        
+        <button class="btn btn-primary btn-lg shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTarea">
+            <i class="bi bi-list-check me-2"></i>Tareas
+        </button>
+    </div>
+    <p class="lead text-secondary mt-3">Has ingresado exitosamente al centro de control de USBTech SPA.</p>
+</div>
+
+        <div class="card dashboard-card border-0 shadow-lg p-4 mt-4" style="background: rgba(255, 255, 255, 0.9); border-radius: 20px;">
+            <h5 class="tech-title mb-4 text-dark"><i class="bi bi-cpu me-2"></i>ESTADO GLOBAL DE PROYECTOS</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr class="tech-title" style="font-size: 0.7rem;">
+                            <th>CLIENTE</th>
+                            <th>ETAPA</th>
+                            <th style="width: 40%;">PROGRESO</th>
+                            <th class="text-center">GESTIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in procesos %}
+                        <tr>
+    <td class="fw-bold text-primary">{{ p.cliente.razon_social }}</td>
+    <td>
+        <span class="badge {% if p.estado == 'diseno' %}bg-info text-dark{% elif p.estado == 'taller' %}bg-warning text-dark{% elif p.estado == 'finalizado' %}bg-success{% else %}bg-secondary{% endif %}">
+            {{ p.get_estado_display|upper }}
+        </span>
+    </td>
+    <td>
+        <div class="d-flex align-items-center">
+            <div class="progress flex-grow-1" style="height: 12px; border-radius: 10px; background-color: #e9ecef;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated 
+                    {% if p.calcular_porcentaje < 40 %}bg-danger
+                    {% elif p.calcular_porcentaje < 80 %}bg-warning
+                    {% else %}bg-success{% endif %}" 
+                    style="width: {{ p.calcular_porcentaje }}%">
+                </div>
+            </div>
+            <span class="ms-2 fw-bold small text-dark">{{ p.calcular_porcentaje }}%</span>
+        </div>
+    </td>
+    <td class="text-center">
+    {% with tipo=request.user.perfil.tipo_usuario %}
+        
+        {% if p.estado == 'taller' and tipo == 'taller' %}
+            <a href="{% url 'finalizar_taller' p.pk %}" class="btn btn-sm btn-info shadow-sm px-3 text-dark fw-bold">
+                <i class="bi bi-send-check"></i> ENVIAR A ADMIN
+            </a>
+
+        {% elif p.estado == 'finalizado' %}
+            {% if request.user.is_superuser or tipo == 'administracion' %}
+                <button onclick="confirmarCierre('{{ p.pk }}', '{{ p.cliente.razon_social }}')" 
+                        class="btn btn-sm btn-success shadow-sm px-3 fw-bold">
+                    <i class="bi bi-check-circle-fill"></i> FINALIZAR PROCESO
+                </button>
+            {% else %}
+                <span class="text-success small fw-bold">
+                    <i class="bi bi-clock-history"></i> EN REVISIÓN ADMIN
+                </span>
+            {% endif %}
+
+        {% elif p.estado == 'cerrado' %}
+            <span class="badge bg-dark">
+                <i class="bi bi-archive"></i> ARCHIVADO
+            </span>
+
+        {% else %}
+            <span class="text-muted small italic">En proceso...</span>
+        {% endif %}
+
+    {% endwith %}
+</td>
+</tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted small">No hay procesos activos en este momento.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </div> {% endblock %}
+    </div>
+</div>
+
+<div class="modal fade" id="modalTarea" tabindex="-1" aria-labelledby="modalTareaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; background: rgba(255,255,255,0.98);">
+            <div class="modal-header bg-dark text-white" style="border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title tech-title" id="modalTareaLabel">
+                    <i class="bi bi-cpu me-2"></i>NUEVA ORDEN
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'crear_proceso_admin' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small tech-title">1. SELECCIONAR CLIENTE</label>
+                        <select name="cliente_id" class="form-select border-primary" required>
+                            <option value="" selected disabled>Elija un cliente...</option>
+                            {% for c in clientes %}
+                                <option value="{{ c.id }}">{{ c.razon_social }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark small tech-title">2. DEFINIR RUTA</label>
+                        <div class="card p-3 border-dashed" style="background: #f8f9fa; border: 2px dashed #dee2e6;">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="pasa_por_diseno" id="swDiseno" checked>
+                                <label class="form-check-label fw-bold text-dark" for="swDiseno">Requiere Diseño</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="pasa_por_taller" id="swTaller" checked>
+                                <label class="form-check-label fw-bold text-dark" for="swTaller">Requiere Taller</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small tech-title">3. INSTRUCCIONES / TERMINACIONES</label>
+                        <textarea name="terminaciones" class="form-control" rows="3" 
+                                placeholder="Ej: Usar acrílico de 3mm, terminación brillante, entrega urgente para el viernes."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow">
+                        Lanzar Proyecto <i class="bi bi-rocket-takeoff ms-2"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+<script>
+function confirmarCierre(id, cliente) {
+    Swal.fire({
+        title: '¿Finalizar proceso?',
+        text: "El proyecto de " + cliente + " se marcará como 100% completado.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#198754',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, finalizar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // USAMOS LA RUTA RELATIVA LIMPIA
+            // Si tu proyecto usa el prefijo 'usuarios/', debe ir aquí:
+            window.location.href = "/usuarios/proceso/cerrar/" + id + "/";
+        }
+    })
+}
+</script>

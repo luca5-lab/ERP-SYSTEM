@@ -1,0 +1,29 @@
+{% extends 'usuarios/dashboard.html' %}
+
+{% block content %}
+<div class="card dashboard-card border-0 shadow-lg p-4">
+    <h5 class="tech-title mb-4 text-dark"><i class="bi bi-clock-history me-2"></i>HISTORIAL DE ACCIONES DEL SISTEMA</h5>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr class="tech-title" style="font-size: 0.7rem;">
+                    <th>USUARIO</th>
+                    <th>ACCIÓN</th>
+                    <th>FECHA Y HORA</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in acciones %}
+                <tr>
+                    <td class="fw-bold text-primary">{{ a.usuario.username|upper }}</td>
+                    <td>{{ a.accion }}</td>
+                    <td class="text-muted small">{{ a.fecha|date:"d/m/Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-center text-muted">No hay registros de actividad aún.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

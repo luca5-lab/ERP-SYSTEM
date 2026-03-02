@@ -1,0 +1,260 @@
+{% extends 'usuarios/dashboard.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <h1 class="tech-title h2 text-white mb-1">Cotización de Artículos</h1>
+        <p class="text-white-50">Venta de productos terminados y tecnología USBTech SPA</p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card dashboard-card border-0 shadow-lg p-4 mb-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-plus-circle me-2 text-primary"></i>Añadir Producto</h5>
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Seleccionar Artículo</label>
+                    <select id="selectArticulo" class="form-select shadow-sm border-2">
+                        <option value="" data-precio="0" data-codigo="">-- Buscar Artículo --</option>
+                        {% for a in articulos %}
+                        <option 
+                            value="{{ a.id }}" 
+                            data-precio="{{ a.precio_unitario|stringformat:'d' }}"
+                            data-codigo="{{ a.codigo }}"
+                        >
+                            {{ a.descripcion }} (${{ a.precio_unitario|intcomma }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Cantidad</label>
+                    <input type="number" id="inputCantidad" class="form-control shadow-sm" value="1" min="1">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase text-primary">Precio Unitario (Opcional)</label>
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-primary text-white border-0">$</span>
+                        <input type="number" id="inputPrecio" class="form-control border-2" placeholder="Precio original automático">
+                    </div>
+                    <small class="text-muted" style="font-size: 0.7rem;">
+                        * Déjalo en blanco para usar el precio normal del sistema.
+                    </small>
+                </div>
+
+                <button type="button" onclick="agregarArticulo()" class="btn btn-primary w-100 rounded-pill shadow-sm fw-bold mt-2">
+                    <i class="bi bi-plus-lg me-2"></i> AGREGAR A LA LISTA
+                </button>
+            </div>
+            
+            <div class="card dashboard-card border-0 shadow-lg p-4">
+                <label class="form-label small fw-bold text-muted text-uppercase">Cliente Destinatario</label>
+                <select id="clienteCotizacion" class="form-select shadow-sm border-2">
+                    <option value="">Seleccione un cliente...</option>
+                    {% for c in clientes %}
+                    <option value="{{ c.id }}">{{ c.razon_social }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card dashboard-card border-0 shadow-lg p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="tablaArticulos">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th class="text-center">Cant.</th>
+                                <th class="text-end">Precio Uni</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-center"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="detalleCotizacion">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 p-4 bg-light rounded-4 border border-white shadow-sm">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Subtotal Neto:</span>
+                        <span id="labelNeto" class="fw-bold fs-5">$ 0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">IVA (19%):</span>
+                        <span id="labelIva" class="fw-bold fs-5">$ 0</span>
+                    </div>
+                    <hr class="my-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h3 tech-title text-primary mb-0">TOTAL:</span>
+                        <span id="labelTotal" class="h3 fw-bold text-primary mb-0">$ 0</span>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button class="btn btn-success flex-grow-1 rounded-pill shadow fw-bold py-2" onclick="finalizarCotizacion()">
+                        <i class="bi bi-check-circle me-2"></i> FINALIZAR Y GENERAR COTIZACIÓN
+                    </button>
+                    <a href="{% url 'lista_cotizaciones_articulos' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                        Cancelar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let totalNetoGlobal = 0;
+
+    // Detectar cambio en el producto para MOSTRAR el precio base como sugerencia
+    document.getElementById('selectArticulo').addEventListener('change', function() {
+        const option = this.options[this.selectedIndex];
+        const precioSugerido = option.getAttribute('data-precio');
+        
+        if (precioSugerido && precioSugerido !== "0") {
+            // Ponemos el precio en el placeholder para que el usuario vea cuánto vale originalmente
+            document.getElementById('inputPrecio').placeholder = Math.round(precioSugerido);
+        } else {
+            document.getElementById('inputPrecio').placeholder = "0";
+        }
+    });
+
+        
+    function limpiarNumero(valor) {
+    // Quita todo lo que no sea número
+    return Number(valor.replace(/[^0-9]/g, ''));
+    }
+    
+
+    function agregarArticulo() {
+        const select = document.getElementById('selectArticulo');
+        const cantidadInput = document.getElementById('inputCantidad');
+        const precioInput = document.getElementById('inputPrecio'); 
+        
+        if (select.value === "") {
+            return alert("Por favor, selecciona un artículo.");
+        }
+
+        const option = select.options[select.selectedIndex];
+        const id = select.value;
+        const codigo = option.getAttribute('data-codigo');
+        const descripcion = option.text.split(' ($')[0];
+        const precioOriginal = parseFloat(option.getAttribute('data-precio'));
+
+        // LÓGICA OPCIONAL: Si el input está vacío, usa el precioOriginal del select
+        let precioFinal = precioInput.value !== ""
+            ? limpiarNumero(precioInput.value)
+            : precioOriginal;
+        console.log("INPUT:", precioInput.value);
+        console.log("LIMPIO:", limpiarNumero(precioInput.value));
+        
+        if (precioFinal <= 0) {
+            return alert("El precio debe ser mayor a 0.");
+        }
+
+        const cantidad = parseInt(cantidadInput.value);
+        const subtotal = precioFinal * cantidad;
+
+        const tabla = document.getElementById('detalleCotizacion');
+        const fila = document.createElement('tr');
+        
+        fila.setAttribute('data-id', id); 
+        fila.setAttribute('data-precio-aplicado', precioFinal); 
+
+        fila.innerHTML = `
+            <td class="small fw-bold text-muted">${codigo}</td>
+            <td class="fw-semibold">${descripcion}</td>
+            <td class="text-center">${cantidad}</td>
+            <td class="text-end">${formatearMoneda(precioFinal)}</td>
+            <td class="text-end fw-bold text-primary">${formatearMoneda(subtotal)}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-danger border-0" onclick="eliminarFila(this, ${subtotal})">
+                    <i class="bi bi-trash-fill"></i>
+                </button>
+            </td>
+        `;
+        
+        tabla.appendChild(fila);
+        actualizarTotales(subtotal);
+
+        // Limpiar campos
+        cantidadInput.value = 1;
+        precioInput.value = "";
+        precioInput.placeholder = "Precio original automático";
+        select.value = "";
+    }
+
+    function eliminarFila(boton, subtotalFila) {
+        boton.closest('tr').remove();
+        actualizarTotales(-subtotalFila);
+    }
+
+    function actualizarTotales(monto) {
+        totalNetoGlobal += monto;
+        const iva = totalNetoGlobal * 0.19;
+        const total = totalNetoGlobal + iva;
+        
+        document.getElementById('labelNeto').innerText = formatearMoneda(totalNetoGlobal);
+        document.getElementById('labelIva').innerText = formatearMoneda(iva);
+        document.getElementById('labelTotal').innerText = formatearMoneda(total);
+    }
+
+    function formatearMoneda(valor) {
+        return new Intl.NumberFormat('es-CL', { 
+            style: 'currency', 
+            currency: 'CLP',
+            minimumFractionDigits: 0
+        }).format(valor);
+    }
+
+    async function finalizarCotizacion() {
+        const clienteId = document.getElementById('clienteCotizacion').value;
+        const filas = document.querySelectorAll('#detalleCotizacion tr');
+        
+        if (!clienteId) return alert("Selecciona un cliente");
+        if (filas.length === 0) return alert("Agrega al menos un artículo a la lista");
+
+        const items = [];
+        filas.forEach(fila => {
+            items.push({
+                id: fila.getAttribute('data-id'),
+                cantidad: fila.cells[2].innerText,
+                precio_unitario: fila.getAttribute('data-precio-aplicado') 
+            });
+        });
+
+        const totalFinal = totalNetoGlobal * 1.19;
+
+        try {
+            const response = await fetch('{% url "guardar_cotizacion_articulo" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    cliente_id: clienteId,
+                    items: items,
+                    total_final: totalFinal
+                })
+            });
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                alert("¡Cotización #" + result.n_presupuesto + " guardada exitosamente!");
+                window.location.href = "{% url 'lista_cotizaciones_articulos' %}";
+            } else {
+                alert("Error: " + result.message);
+            }
+        } catch (e) {
+            alert("Error crítico de conexión con el servidor.");
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends 'usuarios/dashboard.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container-fluid py-2 animate-fade-in">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="tech-title h2 text-white mb-1">Panel de Diseño</h1>
+            <p class="text-white-50">Gestión Creativa y Pre-prensa - USBTech SPA</p>
+        </div>
+        <button class="btn btn-primary shadow-sm btn-tech py-2 px-4" data-bs-toggle="collapse" data-bs-target="#formProceso">
+            <i class="bi bi-plus-square-fill me-2"></i> NUEVO PROYECTO DE DISEÑO
+        </button>
+    </div>
+
+    <div class="collapse mb-4" id="formProceso">
+    <div class="card border-0 shadow-lg p-4" style="background: rgba(255, 255, 255, 0.95); border-radius: 20px;">
+        <form method="POST">
+            {% csrf_token %}
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3 bg-light border-start border-5 border-primary shadow-sm">
+                        <h6 class="fw-bold text-primary tech-title small text-uppercase mb-2">Cliente Destino</h6>
+                        {{ form.cliente|as_crispy_field }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3 bg-light border-start border-5 border-secondary shadow-sm">
+                        <h6 class="fw-bold text-secondary tech-title small text-uppercase mb-2">RESPONSABLE PROYECTO:</h6>
+                        {{ form.responsable_proyecto|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 text-dark">
+                <div class="col-md-6">
+                    <div class="p-4 rounded-4 bg-white border-top border-info border-5 shadow-sm h-100">
+                        <h6 class="fw-bold text-info mb-3 tech-title small text-uppercase">DISEÑO:</h6>
+                        {{ form.reunion|as_crispy_field }}
+                        {{ form.pauta|as_crispy_field }}
+                        {{ form.enviado_correccion|as_crispy_field }}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="p-4 rounded-4 bg-white border-top border-warning border-5 shadow-sm h-100">
+                        <h6 class="fw-bold text-warning mb-3 tech-title small text-uppercase">CORRECCIÓN:</h6>
+                        {{ form.correccion_1|as_crispy_field }}
+                        {{ form.correccion_2|as_crispy_field }}
+                        {{ form.correccion_3|as_crispy_field }}
+                        <hr>
+                        <h6 class="fw-bold text-success mb-2 tech-title small text-uppercase">APROBACIÓN FINAL:</h6>
+                        {{ form.aprobacion_final|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end mt-4">
+                <button type="submit" class="btn btn-primary btn-lg px-5 shadow-sm btn-tech">GUARDAR AVANCE DISEÑO</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+    <div class="card border-0 shadow-lg p-4" style="background: rgba(255, 255, 255, 0.9); border-radius: 20px;">
+        <h5 class="tech-title mb-4 text-dark"><i class="bi bi-clock-history"></i> PROYECTOS EN CURSO</h5>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr class="tech-title" style="font-size: 0.75rem;">
+                        <th class="ps-4">CLIENTE / RESPONSABLE</th>
+                        <th>ESTADO DISEÑO</th>
+                        <th>CORRECCIONES</th>
+                        <th class="text-center">APROBACIÓN</th>
+                        <th class="text-center">GESTIÓN</th> 
+                    </tr>
+                </thead>
+                <tbody class="text-dark">
+                    {% for proceso in procesos %}
+                    {% if proceso.estado == 'diseno' %}
+                    <tr class="bg-white">
+                        <td class="ps-4">
+                            <div class="fw-bold text-primary text-uppercase">{{ proceso.cliente.razon_social }}</div>
+                            <div class="text-muted small">Resp: {{ proceso.responsable_proyecto|default:"Sin asignar" }}</div>
+                        </td>
+                        <td>
+                            {% if proceso.reunion %}<i class="bi bi-check-circle-fill text-success"></i> Reunión<br>{% endif %}
+                            {% if proceso.pauta %}<i class="bi bi-check-circle-fill text-success"></i> Pauta<br>{% endif %}
+                            {% if proceso.enviado_correccion %}<i class="bi bi-send-check text-info"></i> Enviado{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {% if proceso.correccion_1 %}bg-warning{% else %}bg-light text-muted{% endif %}">C1</span>
+                            <span class="badge {% if proceso.correccion_2 %}bg-warning{% else %}bg-light text-muted{% endif %}">C2</span>
+                            <span class="badge {% if proceso.correccion_3 %}bg-warning{% else %}bg-light text-muted{% endif %}">C3</span>
+                        </td>
+                        <td class="text-center">
+                            {% if proceso.aprobacion_final %}
+                                <span class="badge bg-success"><i class="bi bi-hand-thumbs-up"></i> LISTO</span>
+                            {% else %}
+                                <span class="badge bg-secondary">PENDIENTE</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group">
+                                <a href="{% url 'editar_proceso_diseno' proceso.pk %}" class="btn btn-sm btn-outline-primary" title="Editar Checklist">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+
+                                {% if proceso.aprobacion_final %}
+                                    {% if proceso.pasa_por_taller %}
+                                        <a href="{% url 'pasar_a_taller' proceso.pk %}" class="btn btn-sm btn-success fw-bold">
+                                            ENVIAR A TALLER <i class="bi bi-arrow-right"></i>
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'pasar_a_taller' proceso.pk %}" class="btn btn-sm btn-info text-dark fw-bold">
+                                            FINALIZAR PROYECTO <i class="bi bi-check-all"></i>
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-5 text-muted">No hay proyectos en etapa de diseño.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Mantengo tus estilos originales y añado mejoras */
+    .tech-title { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
+    .badge { font-size: 0.7rem; }
+    .custom-check .form-check { margin-bottom: 5px; background: rgba(0,0,0,0.02); padding: 8px 10px 8px 30px; border-radius: 6px; }
+    .btn-tech { font-family: 'Orbitron', sans-serif; font-size: 0.8rem; }
+</style>
+{% endblock %}

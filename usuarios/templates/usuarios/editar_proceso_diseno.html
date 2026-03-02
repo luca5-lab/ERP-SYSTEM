@@ -1,0 +1,37 @@
+{% extends 'usuarios/dashboard.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card border-0 shadow-lg" style="border-radius: 20px;">
+        <div class="card-header bg-dark text-white p-4" style="border-radius: 20px 20px 0 0;">
+            <h4 class="tech-title mb-0">EDITAR AVANCE: {{ proceso.cliente.razon_social }}</h4>
+        </div>
+        <div class="card-body p-5">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6 border-end">
+                         <h6 class="fw-bold text-info mb-3 tech-title small">DISEÑO:</h6>
+                         {{ form.reunion|as_crispy_field }}
+                         {{ form.pauta|as_crispy_field }}
+                         {{ form.enviado_correccion|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6 ps-4">
+                         <h6 class="fw-bold text-warning mb-3 tech-title small">CORRECCIÓN:</h6>
+                         {{ form.correccion_1|as_crispy_field }}
+                         {{ form.correccion_2|as_crispy_field }}
+                         {{ form.correccion_3|as_crispy_field }}
+                         <hr>
+                         {{ form.aprobacion_final|as_crispy_field }}
+                    </div>
+                </div>
+                <div class="text-end mt-4">
+                    <a href="{% url 'dashboard_diseno' %}" class="btn btn-secondary px-4">CANCELAR</a>
+                    <button type="submit" class="btn btn-primary px-4">GUARDAR CAMBIOS</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends 'usuarios/dashboard.html' %}
+{% load humanize %}
+{% load l10n %} 
+
+{% block content %}
+<div class="container-fluid">
+    <div class="mb-4">
+        <h1 class="tech-title h2 text-white mb-1">Nueva Cotización de Servicio</h1>
+        <p class="text-white-50">Cálculo de mano de obra y materiales por metro cuadrado</p>
+    </div>
+
+    <form method="post" id="cotizadorForm">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card dashboard-card border-0 shadow-lg p-4 mb-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Cliente</label>
+                            <select class="form-select shadow-sm" id="cliente" name="cliente" required>
+                                <option value="">Seleccione un cliente...</option>
+                                {% for cliente in clientes %}
+                                <option value="{{ cliente.id }}">{{ cliente.razon_social }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Servicio Técnico</label>
+                            <select class="form-select shadow-sm" id="servicio" name="servicio" required onchange="actualizarCalculo()">
+                                <option value="0" data-precio="0">Seleccione un servicio...</option>
+                                {% for servicio in servicios %}
+                                <option value="{{ servicio.id }}" data-precio="{{ servicio.costo_m2|unlocalize|floatformat:0 }}">
+                                    {{ servicio.codigo }} - {{ servicio.descripcion|truncatechars:30 }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Cantidad (Metros Cuadrados m²)</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-primary text-white"><i class="bi bi-rulers"></i></span>
+                                <input type="number" id="cantidad" name="cantidad" class="form-control" step="0.01" value="1" min="0.1" oninput="actualizarCalculo()">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark">Precio unitario por m²</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-light">$</span>
+                                <input type="text" id="precio_unitario" class="form-control bg-white" readonly value="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card dashboard-card border-0 shadow-lg p-4">
+                    <h5 class="tech-title mb-3" style="font-size: 1rem;">Resumen del Cálculo</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Detalle</th>
+                                    <th class="text-center">Cantidad</th>
+                                    <th class="text-end">Subtotal Neto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td id="resumen-nombre">No seleccionado</td>
+                                    <td class="text-center"><span id="resumen-cant">0</span> m²</td>
+                                    <td class="text-end fw-bold text-primary" id="resumen-subtotal">$ 0</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card bg-primary text-white border-0 shadow-lg p-4 text-center">
+                    <h4 class="tech-title mb-4" style="font-size: 1.2rem;">TOTAL COTIZACIÓN</h4>
+                    <div class="display-5 fw-bold mb-2" id="total-final">$ 0</div>
+                    <p class="small opacity-75">Valores netos sujetos a IVA (19%)</p>
+                    <hr>
+                    <button type="submit" class="btn btn-light btn-lg w-100 rounded-pill fw-bold text-primary shadow">
+                        <i class="bi bi-file-earmark-pdf-fill me-2"></i> GUARDAR Y GENERAR
+                    </button>
+                    <a href="{% url 'menu_cotizaciones' %}" class="btn btn-outline-light w-100 rounded-pill mt-3 border-0">
+                        Cancelar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function actualizarCalculo() {
+    const select = document.getElementById('servicio');
+    const inputCant = document.getElementById('cantidad');
+    const precioUnitInput = document.getElementById('precio_unitario');
+    const resNombre = document.getElementById('resumen-nombre');
+    const resCant = document.getElementById('resumen-cant');
+    const resSubtotal = document.getElementById('resumen-subtotal');
+    const totalFinal = document.getElementById('total-final');
+
+    const selectedOption = select.options[select.selectedIndex];
+    
+    // LIMPIEZA REFORZADA:
+    let precioRaw = selectedOption.getAttribute('data-precio') || "0";
+    
+    // Si Django manda "12000,00" o "12.000", esto lo deja como "12000"
+    let precioLimpio = precioRaw.toString()
+                        .split(',')[0]          // Ignora lo que esté después de la coma
+                        .replace(/\D/g, '');    // Elimina TODO lo que no sea un número (puntos, espacios, etc)
+                        
+    let precio = parseInt(precioLimpio) || 0;
+    let cantidad = parseFloat(inputCant.value) || 0;
+
+    const formatter = new Intl.NumberFormat('es-CL', {
+        style: 'currency',
+        currency: 'CLP',
+        minimumFractionDigits: 0
+    });
+
+    let subtotal = Math.round(precio * cantidad);
+
+    precioUnitInput.value = formatter.format(precio);
+    resNombre.innerText = select.value === "0" ? "No seleccionado" : selectedOption.text;
+    resCant.innerText = cantidad;
+    resSubtotal.innerText = formatter.format(subtotal);
+    totalFinal.innerText = formatter.format(subtotal);
+}
+</script>
+
+<style>
+    .dashboard-card { border-radius: 15px !important; }
+    .input-group-text { border: none; }
+    .form-control, .form-select { border: 1px solid #dee2e6; }
+    .form-control:focus, .form-select:focus { border-color: #0d6efd; box-shadow: none; }
+</style>
+{% endblock %}

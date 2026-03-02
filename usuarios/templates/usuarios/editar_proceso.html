@@ -1,0 +1,148 @@
+{% extends 'usuarios/dashboard.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container py-5 animate-fade-in">
+    <div class="row justify-content-center">
+        <div class="col-md-11">
+            <div class="card border-0 shadow-lg p-4" style="background: rgba(255, 255, 255, 0.95); border-radius: 20px;">
+                
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-warning p-3 rounded-circle me-3 shadow-sm">
+                            <i class="bi bi-pencil-fill text-dark"></i>
+                        </div>
+                        <div>
+                            <h2 class="tech-title h4 mb-0">ACTUALIZAR PROCESO #{{ proceso.id }}</h2>
+                            <span class="badge bg-dark mt-1">{{ proceso.cliente.razon_social }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="POST" id="editForm">
+                    {% csrf_token %}
+                    
+                    <div style="display:none;">
+                        {{ form.cliente }}
+                        {{ form.usuario }}
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-8">
+                            <div class="p-4 rounded-4 bg-light border-start border-5 border-warning h-100">
+                                <h6 class="fw-bold text-warning mb-4 tech-title small uppercase">
+                                    <i class="bi bi-box-seam me-2"></i>Insumos y Materiales
+                                </h6>
+                                <div class="row">
+                                    {% for field in form %}
+                                        {% if field.name in "acrilico,sintra,ojetillo,ad_prom,ad_vehicular,empavonado,microperf,sellado,tela_pvc" %}
+                                        <div class="col-md-4 mb-2">
+                                            <div class="form-check p-2 rounded {% if field.value %}already-checked{% endif %}">
+                                                {{ field }}
+                                                <label class="form-check-label fw-bold small ms-2">{{ field.label }}</label>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="p-4 rounded-4 bg-light border-start border-5 border-info h-100">
+                                <h6 class="fw-bold text-info mb-4 tech-title small uppercase">
+                                    <i class="bi bi-gear-wide-connected me-2"></i>Producción
+                                </h6>
+                                {% for field in form %}
+                                    {% if field.name in "impresion,corte" %}
+                                    <div class="mb-3">
+                                        <div class="form-check p-2 rounded {% if field.value %}already-checked{% endif %}">
+                                            {{ field }}
+                                            <label class="form-check-label fw-bold ms-2">{{ field.label }}</label>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+    <div class="p-4 rounded-4 bg-white border shadow-sm">
+        <h6 class="fw-bold text-secondary mb-3 tech-title small uppercase">
+            <i class="bi bi-chat-dots me-2"></i>Observaciones y Control de Calidad
+        </h6>
+        <div class="row mt-3">
+            <div class="col-md-7 border-end">
+                {{ form.terminaciones|as_crispy_field }}
+            </div>
+            
+            <div class="col-md-5 ps-4">
+                <div class="form-check mt-2">
+                    <input type="checkbox" 
+                           name="{{ form.aprobacion_taller.name }}" 
+                           id="{{ form.aprobacion_taller.id_for_label }}"
+                           class="form-check-input"
+                           {% if form.aprobacion_taller.value %}checked{% endif %}>
+                    
+                    <label class="form-check-label fw-bold text-success ms-2" 
+                           for="{{ form.aprobacion_taller.id_for_label }}">
+                        APROBACIÓN FINAL
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-3 mt-5">
+                        <a href="{% url 'dashboard_taller' %}" class="btn btn-light px-4 border">Volver</a>
+                        <button type="submit" class="btn btn-primary btn-tech px-5 shadow" id="btnSubmit">
+                            <i class="bi bi-arrow-repeat me-2"></i>GUARDAR CAMBIOS
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tech-title { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
+    
+    /* Solo cambiamos el color de fondo para indicar que ya estaba marcado, 
+       pero sin bloquear el clic */
+    .already-checked {
+        background-color: rgba(0, 0, 0, 0.05) !important;
+        border: 1px dashed #adb5bd;
+    }
+
+    .form-check {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .form-check:hover {
+        background-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Eliminamos la parte que decía pointer-events: none */
+    .btn-tech { font-family: 'Orbitron', sans-serif; font-size: 0.9rem; }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.getElementById('editForm');
+        
+        // Esta función se asegura de que los campos 'disabled' (como el Cliente)
+        // se habiliten UN SEGUNDO antes de enviar para que Django no de error.
+        form.onsubmit = function() {
+            const disabledFields = form.querySelectorAll('[disabled]');
+            disabledFields.forEach(field => {
+                field.disabled = false;
+            });
+            return true;
+        };
+    });
+</script>
+{% endblock %}

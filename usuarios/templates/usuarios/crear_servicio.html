@@ -1,0 +1,73 @@
+{% extends "usuarios/dashboard.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card dashboard-card border-0 shadow-lg p-5">
+                <h2 class="tech-title text-dark mb-4 text-center">
+                    <i class="bi {% if editando %}bi-pencil-square text-info{% else %}bi-plus-circle text-primary{% endif %} me-2"></i>
+                    {% if editando %}EDITAR SERVICIO: {{ form.instance.codigo }}{% else %}NUEVO SERVICIO{% endif %}
+                </h2>
+                
+                <form method="post" id="servicioForm">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Familia de Servicio</label>
+                            {{ form.familia }}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Descripción del Servicio</label>
+                            {{ form.descripcion }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Costo por M²</label>
+                            {{ form.costo_m2 }}
+                        </div>
+                    </div>
+
+                    <div class="mt-5 d-flex gap-3 justify-content-center">
+                        <a href="{% url 'lista_servicios' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 shadow">
+                            <i class="bi bi-save me-2"></i>
+                            {% if editando %}Actualizar Servicio{% else %}Guardar Servicio{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const inputCosto = document.querySelector('[name="costo_m2"]');
+
+    const formatearVisualmente = (input) => {
+        let valor = input.value.replace(/\D/g, "");
+        if (valor !== "") {
+            input.value = new Intl.NumberFormat('de-DE').format(valor);
+        }
+    };
+
+    if (inputCosto) {
+        formatearVisualmente(inputCosto);
+        inputCosto.addEventListener('input', function(e) {
+            formatearVisualmente(e.target);
+        });
+    }
+
+    const form = document.getElementById('servicioForm');
+    form.addEventListener('submit', function() {
+        if (inputCosto) {
+            inputCosto.value = inputCosto.value.replace(/\./g, "");
+        }
+    });
+});
+</script>
+{% endblock %}

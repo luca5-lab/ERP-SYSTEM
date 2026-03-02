@@ -1,0 +1,134 @@
+{% extends 'usuarios/dashboard.html' %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <div class="card dashboard-card border-0 shadow-lg p-4 p-md-5 animate-fade-in">
+        
+        <div class="d-flex align-items-center justify-content-between mb-5 pb-3 border-bottom border-secondary border-opacity-25">
+            <div>
+                <h1 class="display-5 fw-bold text-dark tech-title mb-1">CENTRO DE INFORMES</h1>
+                <p class="lead text-secondary mb-0">Exportación de datos y métricas críticas de USBTech</p>
+            </div>
+            <div class="d-none d-md-block">
+                <i class="bi bi-layers-half fs-1 text-primary opacity-50"></i>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="report-card h-100 p-4 border-start border-warning border-5 shadow-sm transition-hover">
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div>
+                            <h6 class="text-muted small text-uppercase fw-bold ls-1">Proveedores</h6>
+                            <h2 class="fw-bold text-dark mb-0">{{ proveedores_count|default:"0" }}</h2>
+                        </div>
+                        <div class="icon-shape bg-warning bg-opacity-10 p-2 rounded-3">
+                            <i class="bi bi-truck text-warning fs-3"></i>
+                        </div>
+                    </div>
+                    <div class="mt-auto">
+                        <a href="{% url 'exportar_proveedores_excel' %}" class="btn btn-warning w-100 py-2 fw-bold text-white shadow-sm btn-tech">
+                            <i class="bi bi-file-earmark-excel me-2"></i>GENERAR EXCEL
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="report-card h-100 p-4 border-start border-success border-5 shadow-sm transition-hover">
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div>
+                            <h6 class="text-muted small text-uppercase fw-bold ls-1">Clientes</h6>
+                            <h2 class="fw-bold text-dark mb-0">{{ clientes_count|default:"0" }}</h2>
+                        </div>
+                        <div class="icon-shape bg-success bg-opacity-10 p-2 rounded-3">
+                            <i class="bi bi-people-fill text-success fs-3"></i>
+                        </div>
+                    </div>
+                    <div class="mt-auto">
+                        <a href="{% url 'exportar_clientes_excel' %}" class="btn btn-success w-100 py-2 fw-bold shadow-sm btn-tech">
+                            <i class="bi bi-file-earmark-excel me-2"></i>GENERAR EXCEL
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="report-card h-100 p-4 border-start border-info border-5 shadow-sm transition-hover">
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div>
+                            <h6 class="text-muted small text-uppercase fw-bold ls-1">Total Ventas</h6>
+                            <h2 class="fw-bold text-dark mb-0">${{ total_ventas|default:"0" }}</h2>
+                        </div>
+                        <div class="icon-shape bg-info bg-opacity-10 p-2 rounded-3">
+                            <i class="bi bi-graph-up-arrow text-info fs-3"></i>
+                        </div>
+                    </div>
+                    <div class="mt-auto">
+                        
+                        <a href="#" class="btn btn-info w-100 py-2 fw-bold text-white shadow-sm btn-tech">
+                            <i class="bi bi-download me-2"></i>DESCARGAR VENTAS
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Tipografía y Espaciado */
+    .ls-1 { letter-spacing: 1.5px; }
+    
+    /* Estilo de la Tarjeta de Reporte (Efecto Glass sutil) */
+    .report-card {
+        background: rgba(255, 255, 255, 0.7);
+        border-radius: 15px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-column: column;
+        border-top: none;
+        border-right: none;
+        border-bottom: none;
+    }
+
+    /* Animación de Elevación (Hover) */
+    .transition-hover:hover {
+        transform: translateY(-8px);
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Botones con estilo Orbitron */
+    .btn-tech {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+        border-radius: 10px;
+        transition: all 0.2s;
+    }
+
+    .btn-tech:active {
+        transform: scale(0.98);
+    }
+
+    /* Animación de entrada al cargar la página */
+    .animate-fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Ajuste para iconos */
+    .icon-shape {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+{% endblock %}

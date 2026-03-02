@@ -1,0 +1,167 @@
+{% extends 'usuarios/dashboard.html' %}
+{% load crispy_forms_tags %}
+{% load extras %}
+
+{% block content %}
+<div class="container-fluid py-2 animate-fade-in">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="tech-title h2 text-white mb-1">Centro de Producción</h1>
+            <p class="text-white-50">Gestión de manufactura y bitácora operativa de USBTech SPA</p>
+        </div>
+    </div>
+
+    <div class="collapse mb-4" id="formProceso">
+        <div class="card border-0 shadow-lg p-4" style="background: rgba(255, 255, 255, 0.95); border-radius: 20px;">
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-light border-start border-5 border-primary shadow-sm">
+                            <h6 class="fw-bold text-primary tech-title small text-uppercase mb-2">Cliente Destino</h6>
+                            {{ form.cliente|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-8">
+                        <div class="p-4 rounded-4 bg-white border-start border-warning border-5 shadow-sm h-100">
+                            <h6 class="fw-bold text-warning mb-4 tech-title small text-uppercase">1. Materiales</h6>
+                            <div class="row">
+                                <div class="col-md-4 custom-check">{{ form.acrilico|as_crispy_field }}</div>
+                                <div class="col-md-4 custom-check">{{ form.sintra|as_crispy_field }}</div>
+                                <div class="col-md-4 custom-check">{{ form.ojetillo|as_crispy_field }}</div>
+                                <div class="col-md-4 custom-check">{{ form.ad_prom|as_crispy_field }}</div>
+                                <div class="col-md-4 custom-check">{{ form.ad_vehicular|as_crispy_field }}</div>
+                                <div class="col-md-4 custom-check">{{ form.empavonado|as_crispy_field }}</div>
+                                <div class="col-md-4 custom-check">{{ form.microperf|as_crispy_field }}</div>
+                                <div class="col-md-4 custom-check">{{ form.sellado|as_crispy_field }}</div>
+                                <div class="col-md-4 custom-check">{{ form.tela_pvc|as_crispy_field }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="p-4 rounded-4 bg-white border-start border-info border-5 shadow-sm h-100">
+                            <h6 class="fw-bold text-info mb-4 tech-title small text-uppercase">2. Producción</h6>
+                            {{ form.impresion|as_crispy_field }}
+                            {{ form.corte|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-2">
+    <div class="p-4 rounded-4 bg-white border shadow-sm">
+        <h6 class="fw-bold text-secondary mb-3 tech-title small text-uppercase">3. Terminaciones y Control</h6>
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                {{ form.terminaciones|as_crispy_field }}
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 rounded-3 border border-success bg-success bg-opacity-10 custom-check">
+                    {{ form.aprobacion_taller|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+                </div>
+
+                <div class="text-end mt-4">
+                    <button type="submit" class="btn btn-success btn-lg px-5 shadow-sm btn-tech">FINALIZAR REGISTRO</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-lg p-4" style="background: rgba(255, 255, 255, 0.9); border-radius: 20px;">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr class="tech-title" style="font-size: 0.75rem;">
+                        <th class="ps-4">CLIENTE / FECHA</th>
+                        <th>MATERIALES</th>
+                        <th>OPERACIONES</th>
+                        <th>OBSERVACIONES</th>
+                        <th class="text-center">ACCIONES</th> </tr>
+                </thead>
+                <tbody class="text-dark">
+    {% for proceso in procesos %}
+    <tr class="bg-white">
+        <td class="ps-4">
+            <div class="fw-bold text-primary text-uppercase">{{ proceso.cliente.razon_social }}</div>
+            <div class="text-muted small">ORDEN-{{ proceso.id }} | {{ proceso.creado|date:"d/m/Y" }}</div>
+        </td>
+        <td>
+            <div class="d-flex flex-wrap gap-1" style="max-width: 250px;">
+                {% if proceso.acrilico %}<span class="badge-tech badge-mat">Acrílico</span>{% endif %}
+                {% if proceso.sintra %}<span class="badge-tech badge-mat">Sintra</span>{% endif %}
+                {% if proceso.ojetillo %}<span class="badge-tech badge-mat">Ojetillo</span>{% endif %}
+                {% if proceso.ad_prom %}<span class="badge-tech badge-mat">AD Prom</span>{% endif %}
+                {% if proceso.ad_vehicular %}<span class="badge-tech badge-mat">AD Vehicular</span>{% endif %}
+                {% if proceso.empavonado %}<span class="badge-tech badge-mat">Empavonado</span>{% endif %}
+                {% if proceso.microperf %}<span class="badge-tech badge-mat">Microperf</span>{% endif %}
+                {% if proceso.sellado %}<span class="badge-tech badge-mat">Sellado</span>{% endif %}
+                {% if proceso.tela_pvc %}<span class="badge-tech badge-mat">Tela PVC</span>{% endif %}
+            </div>
+        </td>
+        <td>
+            {% if proceso.impresion %}<i class="bi bi- droplet-fill text-success"></i> <span class="text-success small fw-bold">IMPRESIÓN</span><br>{% endif %}
+            {% if proceso.corte %}<i class="bi bi-scissors text-info"></i> <span class="text-info small fw-bold">CORTE</span>{% endif %}
+        </td>
+        
+        <td class="text-center">
+            {% if proceso.aprobacion_taller %}
+                <span class="badge bg-success shadow-sm animate-fade-in">
+                    <i class="bi bi-patch-check-fill"></i> FINALIZADO
+                </span>
+            {% else %}
+                <span class="badge bg-light text-muted border">
+                    <i class="bi bi-clock"></i> PENDIENTE
+                </span>
+            {% endif %}
+        </td>
+
+        <td class="text-center">
+            <div class="btn-group">
+                <a href="{% url 'editar_proceso' proceso.pk %}" class="btn btn-outline-primary btn-sm" title="Editar / Aprobar">
+                    <i class="bi bi-pencil-square fs-5"></i>
+                </a>
+
+                {% if proceso.estado == 'taller' %}
+                    {% if proceso.aprobacion_taller %}
+                        <a href="{% url 'finalizar_taller' proceso.pk %}" class="btn btn-success btn-sm ms-2 shadow-sm fw-bold animate-fade-in" style="font-size: 0.7rem;">
+                            <i class="bi bi-send-check-fill"></i> ENVIAR A ADMIN
+                        </a>
+                    {% else %}
+                        <button class="btn btn-secondary btn-sm ms-2 opacity-50 fw-bold" style="font-size: 0.7rem; cursor: not-allowed;" title="Debe marcar la Aprobación Final en Editar" disabled>
+                            <i class="bi bi-lock-fill"></i> En progreso...
+                        </button>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" class="text-center py-5 text-muted">No hay registros.</td></tr>
+    {% endfor %}
+</tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tech-title { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
+    .table thead th { border: none; padding: 15px; }
+    .table tbody td { border-bottom: 1px solid rgba(0,0,0,0.05); padding: 15px 10px; }
+    .badge-tech { font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .badge-mat { background: #f8f9fa; color: #060542; border: 1px solid #dee2e6; }
+    .custom-check .form-check { margin-bottom: 5px; background: rgba(0,0,0,0.02); padding: 8px 10px 8px 30px; border-radius: 6px; transition: 0.2s; }
+    .btn-tech { font-family: 'Orbitron', sans-serif; font-size: 0.8rem; }
+    .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+{% endblock %}

@@ -1,0 +1,246 @@
+{% extends 'usuarios/dashboard.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="tech-title text-white mb-1"><i class="bi bi-box-seam me-2"></i>CONTROL DE INVENTARIO</h2>
+            <p class="text-white-50">Gestión de insumos al 100% y ajustes de stock</p>
+        </div>
+        
+        {% if request.user.is_superuser or request.user.perfil.tipo_usuario == 'administracion' or request.user.perfil.tipo_usuario == 'admin' %}
+        <button class="btn btn-primary rounded-pill px-4 shadow" data-bs-toggle="modal" data-bs-target="#modalNuevoMaterial">
+            <i class="bi bi-plus-lg me-2"></i> INGRESAR NUEVO MATERIAL
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="modal fade" id="modalEditarMaterial" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form id="formEditarMaterial">
+                    {% csrf_token %}
+                    <input type="hidden" id="edit_material_id">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title tech-title text-uppercase">Editar Información</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Nombre del Material</label>
+                            <input type="text" id="edit_nombre" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Variedad / Detalle</label>
+                            <input type="text" id="edit_variedad" class="form-control">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">ACTUALIZAR DATOS</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        {% regroup materiales by get_categoria_display as cat_list %}
+        {% for categoria in cat_list %}
+        <div class="col-xl-4 col-md-6">
+            <div class="card border-0 shadow-lg h-100" style="border-radius: 20px; overflow: hidden;">
+                <div class="card-header bg-dark py-3">
+                    <h6 class="tech-title text-white mb-0 small text-uppercase">{{ categoria.grouper }}</h6>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr style="font-size: 0.7rem;" class="text-muted">
+                                <th class="ps-3">MATERIAL</th>
+                                <th class="text-center">STOCK</th>
+                                {% if request.user.is_superuser or request.user.perfil.tipo_usuario != 'diseno' and request.user.perfil.tipo_usuario != 'diseño' %}
+                                <th class="text-center">ACCIONES</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in categoria.list %}
+                            <tr>
+                                <td class="ps-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="fw-bold text-dark small">{{ item.nombre }}</div>
+                                            <div class="text-muted" style="font-size: 0.65rem;">{{ item.variedad }}</div>
+                                        </div>
+                                        {% if request.user.is_superuser or request.user.perfil.tipo_usuario != 'diseno' and request.user.perfil.tipo_usuario != 'diseño' %}
+                                        <button class="btn btn-sm text-primary p-0 btn-abrir-edicion shadow-none" 
+                                                data-id="{{ item.id }}" 
+                                                data-nombre="{{ item.nombre }}" 
+                                                data-variedad="{{ item.variedad }}">
+                                            <i class="bi bi-pencil-square" style="font-size: 0.8rem;"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <td class="text-center">
+                                    <div class="progress mb-1" style="height: 6px;">
+                                        <div class="progress-bar {% if item.nivel_actual <= 30 %}bg-danger{% elif item.nivel_actual <= 50 %}bg-warning{% else %}bg-success{% endif %}" 
+                                             style="width: {{ item.nivel_actual }}%"></div>
+                                    </div>
+                                    <small class="fw-bold">{{ item.nivel_actual }}%</small>
+                                </td>
+                                
+                                {% if request.user.is_superuser or request.user.perfil.tipo_usuario != 'diseno' and request.user.perfil.tipo_usuario != 'diseño' %}
+                                <td class="text-center">
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary btn-adjust" data-id="{{ item.id }}" data-action="down" title="Restar 5%">-</button>
+                                        <button class="btn btn-sm btn-outline-primary btn-adjust" data-id="{{ item.id }}" data-action="up" title="Sumar 5%">+</button>
+                                        
+                                        {% if request.user.is_superuser or request.user.perfil.tipo_usuario == 'administracion' or request.user.perfil.tipo_usuario == 'admin' %}
+                                        <a href="{% url 'eliminar_material' item.id %}" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('¿Eliminar material?')">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="modal fade" id="modalNuevoMaterial" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form action="{% url 'crear_material_ajax' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title tech-title">NUEVO INGRESO (100% STOCK)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nombre del Material</label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej: Adhesivo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Categoría</label>
+                        <select name="categoria" class="form-select" required>
+                            <option value="ADH">Adhesivos</option>
+                            <option value="TEL">Telas</option>
+                            <option value="RIG">Materiales Rígidos</option>
+                            <option value="TIN">Tintas</option>
+                            <option value="LIM">Limpieza</option>
+                            <option value="REP">Repuesto Taller</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Variedad / Detalle</label>
+                        <input type="text" name="variedad" class="form-control" placeholder="Ej: Brillante 3mm">
+                    </div>
+                    <div class="alert alert-info py-2 small">
+                        <i class="bi bi-info-circle me-2"></i> Este material se registrará con un nivel inicial del <strong>100%</strong>.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">GUARDAR E INGRESAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- LÓGICA PARA EDITAR NOMBRE/VARIEDAD ---
+    const botonesEdicion = document.querySelectorAll('.btn-abrir-edicion');
+    const modalEditarElem = document.getElementById('modalEditarMaterial');
+    const modalEditar = new bootstrap.Modal(modalEditarElem);
+
+    botonesEdicion.forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('edit_material_id').value = this.dataset.id;
+            document.getElementById('edit_nombre').value = this.dataset.nombre;
+            document.getElementById('edit_variedad').value = this.dataset.variedad;
+            modalEditar.show();
+        });
+    });
+
+    document.getElementById('formEditarMaterial').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const id = document.getElementById('edit_material_id').value;
+        const nombre = document.getElementById('edit_nombre').value;
+        const variedad = document.getElementById('edit_variedad').value;
+
+        fetch("{% url 'editar_material_nombre_ajax' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `id=${id}&nombre=${encodeURIComponent(nombre)}&variedad=${encodeURIComponent(variedad)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert("Error al actualizar: " + (data.message || "Error desconocido"));
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+
+    // --- LÓGICA PARA AJUSTAR STOCK ---
+    const botonesAdjust = document.querySelectorAll('.btn-adjust');
+
+    botonesAdjust.forEach(boton => {
+        boton.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const materialId = this.dataset.id;
+            const accion = this.dataset.action;
+            const fila = this.closest('tr');
+            const barra = fila.querySelector('.progress-bar');
+            const textoNivel = fila.querySelector('small.fw-bold');
+            const cantidadCambio = 5;
+
+            fetch("{% url 'actualizar_stock_ajax' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `id=${materialId}&accion=${accion}&cantidad=${cantidadCambio}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const nivel = data.nuevo_nivel;
+                    barra.style.width = nivel + '%';
+                    textoNivel.innerText = nivel + '%';
+                    
+                    barra.className = 'progress-bar '; 
+                    if (nivel <= 30) {
+                        barra.classList.add('bg-danger');
+                    } else if (nivel <= 50) {
+                        barra.classList.add('bg-warning');
+                    } else {
+                        barra.classList.add('bg-success');
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    });
+});
+</script>
+{% endblock %}
