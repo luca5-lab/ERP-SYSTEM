@@ -23,9 +23,23 @@
                             {{ form.descripcion }}
                         </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Costo por M²</label>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Costo Base</label>
                             {{ form.costo_m2 }}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Margen Ganancia (%)</label>
+                            {{ form.margen_ganancia }}
+                            
+                            {% if form.margen_ganancia.errors %}
+                                <div class="text-danger small">{{ form.margen_ganancia.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Precio Venta</label>
+                            <input type="text" id="id_precio_venta" class="form-control bg-white border-primary rounded-pill px-3 fw-bold" readonly>
                         </div>
                     </div>
 
@@ -44,29 +58,116 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const inputCosto = document.querySelector('[name="costo_m2"]');
+    const inputMargen = document.getElementById('id_margen_ganancia');
+    const inputPrecioVenta = document.getElementById('id_precio_venta');
+    const form = document.getElementById('servicioForm');
 
-    const formatearVisualmente = (input) => {
-        let valor = input.value.replace(/\D/g, "");
-        if (valor !== "") {
-            input.value = new Intl.NumberFormat('de-DE').format(valor);
-        }
-    };
+    if (!inputCosto) return;
 
-    if (inputCosto) {
-        formatearVisualmente(inputCosto);
-        inputCosto.addEventListener('input', function(e) {
-            formatearVisualmente(e.target);
+    // --- 1. LIMPIEZA PARA CÁLCULOS (Mantiene decimales) ---
+    function limpiarParaCalculo(valor) {
+    if (!valor) return 0;
+
+    let v = valor.toString().trim();
+
+    // Si viene tipo "3000" → OK
+    if (/^\d+$/.test(v)) {
+        return parseFloat(v);
+    }
+
+    // Si viene tipo "3.000" → quitar puntos de miles
+    if (/^\d{1,3}(\.\d{3})+$/.test(v)) {
+        v = v.replace(/\./g, '');
+        return parseFloat(v);
+    }
+
+    // Si viene tipo "3000,50" → decimal chileno
+    if (v.includes(',')) {
+        v = v.replace(/\./g, '').replace(',', '.');
+    }
+
+    return parseFloat(v) || 0;
+}
+
+    // --- 2. FORMATEO VISUAL ---
+    function aplicarFormato(input) {
+        let valor = limpiarParaCalculo(input.value);
+        if (valor === 0) return;
+
+        input.value = valor.toLocaleString('de-DE', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
         });
     }
 
-    const form = document.getElementById('servicioForm');
-    form.addEventListener('submit', function() {
-        if (inputCosto) {
-            inputCosto.value = inputCosto.value.replace(/\./g, "");
+    // --- 3. LÓGICA DE RECALCULO ---
+    function calcularPrecioVenta() {
+        let margen = parseFloat(inputMargen.value) || 0;
+
+        // Validaciones de tope
+        if (margen > 100) { margen = 100; inputMargen.value = 100; }
+        if (margen < 0) { margen = 0; inputMargen.value = 0; }
+
+        const costo = limpiarParaCalculo(inputCosto.value);
+        
+        if (costo > 0) {
+            // Cálculo: Costo + Margen
+            const venta = costo * (1 + (margen / 100));
+            
+            // Mostramos el precio de venta con 2 decimales para que sea exacto
+            inputPrecioVenta.value = venta.toLocaleString('de-DE', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        } else {
+            inputPrecioVenta.value = "";
         }
+    }
+
+    // --- EVENTOS ---
+    // Al entrar al campo, quitamos puntos para editar fácil
+    inputCosto.addEventListener('focus', function() {
+        this.value = this.value.replace(/\./g, '');
+    });
+    
+    inputCosto.addEventListener('blur', function() {
+        aplicarFormato(this);
+    });
+
+    inputCosto.addEventListener('input', calcularPrecioVenta);
+    inputMargen.addEventListener('input', calcularPrecioVenta);
+
+    // Formateo inicial (para edición)
+    if (inputCosto.value) {
+        aplicarFormato(inputCosto);
+        calcularPrecioVenta();
+    }
+
+    // --- ANTES DE ENVIAR (Normalización para Django) ---
+    form.addEventListener('submit', function(e) {
+        const costoFinal = limpiarParaCalculo(inputCosto.value);
+        
+        if (costoFinal <= 0) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'warning',
+                title: 'Faltan datos',
+                text: 'Por favor, ingresa un costo válido.',
+                confirmButtonColor: '#0d6efd'
+            });
+            return;
+        }
+
+        // Enviamos a Django con punto decimal estándar (ej: 1500.50)
+        inputCosto.value = costoFinal.toFixed(2);
+
+        const btn = form.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> GUARDANDO...`;
     });
 });
 </script>

@@ -20,7 +20,7 @@
                         {% for a in articulos %}
                         <option 
                             value="{{ a.id }}" 
-                            data-precio="{{ a.precio_unitario|stringformat:'d' }}"
+                            data-precio="{{ a.precio_unitario|stringformat:'f' }}"
                             data-codigo="{{ a.codigo }}"
                         >
                             {{ a.descripcion }} (${{ a.precio_unitario|intcomma }})
@@ -38,7 +38,7 @@
                     <label class="form-label small fw-bold text-muted text-uppercase text-primary">Precio Unitario (Opcional)</label>
                     <div class="input-group shadow-sm">
                         <span class="input-group-text bg-primary text-white border-0">$</span>
-                        <input type="number" id="inputPrecio" class="form-control border-2" placeholder="Precio original automático">
+                        <input type="text" id="inputPrecio" inputmode="decimal" class="form-control border-2" placeholder="Precio original automático">
                     </div>
                     <small class="text-muted" style="font-size: 0.7rem;">
                         * Déjalo en blanco para usar el precio normal del sistema.
@@ -110,151 +110,203 @@
 </div>
 
 <script>
-    let totalNetoGlobal = 0;
+let totalNetoGlobal = 0;
 
-    // Detectar cambio en el producto para MOSTRAR el precio base como sugerencia
-    document.getElementById('selectArticulo').addEventListener('change', function() {
-        const option = this.options[this.selectedIndex];
-        const precioSugerido = option.getAttribute('data-precio');
-        
-        if (precioSugerido && precioSugerido !== "0") {
-            // Ponemos el precio en el placeholder para que el usuario vea cuánto vale originalmente
-            document.getElementById('inputPrecio').placeholder = Math.round(precioSugerido);
-        } else {
-            document.getElementById('inputPrecio').placeholder = "0";
-        }
-    });
-
-        
-    function limpiarNumero(valor) {
-    // Quita todo lo que no sea número
-    return Number(valor.replace(/[^0-9]/g, ''));
-    }
-    
-
-    function agregarArticulo() {
-        const select = document.getElementById('selectArticulo');
-        const cantidadInput = document.getElementById('inputCantidad');
-        const precioInput = document.getElementById('inputPrecio'); 
-        
-        if (select.value === "") {
-            return alert("Por favor, selecciona un artículo.");
-        }
-
-        const option = select.options[select.selectedIndex];
-        const id = select.value;
-        const codigo = option.getAttribute('data-codigo');
-        const descripcion = option.text.split(' ($')[0];
-        const precioOriginal = parseFloat(option.getAttribute('data-precio'));
-
-        // LÓGICA OPCIONAL: Si el input está vacío, usa el precioOriginal del select
-        let precioFinal = precioInput.value !== ""
-            ? limpiarNumero(precioInput.value)
-            : precioOriginal;
-        console.log("INPUT:", precioInput.value);
-        console.log("LIMPIO:", limpiarNumero(precioInput.value));
-        
-        if (precioFinal <= 0) {
-            return alert("El precio debe ser mayor a 0.");
-        }
-
-        const cantidad = parseInt(cantidadInput.value);
-        const subtotal = precioFinal * cantidad;
-
+// ==========================================
+// 1. CARGA INICIAL (MODO EDICIÓN)
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Cargamos los detalles que vienen desde Django (si existen)
+    {% if detalles_json %}
+        const detallesExistentes = {{ detalles_json|safe }};
         const tabla = document.getElementById('detalleCotizacion');
-        const fila = document.createElement('tr');
         
-        fila.setAttribute('data-id', id); 
-        fila.setAttribute('data-precio-aplicado', precioFinal); 
+        detallesExistentes.forEach(item => {
+            const nuevaFila = document.createElement('tr');
+            nuevaFila.classList.add('align-middle');
+            
+            // Atributos clave: 'data-id' es el ID del Artículo, 'data-precio-aplicado' es el unitario
+            nuevaFila.setAttribute('data-id', item.id);
+            nuevaFila.setAttribute('data-precio-aplicado', item.precio);
 
-        fila.innerHTML = `
-            <td class="small fw-bold text-muted">${codigo}</td>
-            <td class="fw-semibold">${descripcion}</td>
-            <td class="text-center">${cantidad}</td>
-            <td class="text-end">${formatearMoneda(precioFinal)}</td>
-            <td class="text-end fw-bold text-primary">${formatearMoneda(subtotal)}</td>
-            <td class="text-center">
-                <button class="btn btn-sm btn-outline-danger border-0" onclick="eliminarFila(this, ${subtotal})">
-                    <i class="bi bi-trash-fill"></i>
-                </button>
-            </td>
-        `;
-        
-        tabla.appendChild(fila);
-        actualizarTotales(subtotal);
-
-        // Limpiar campos
-        cantidadInput.value = 1;
-        precioInput.value = "";
-        precioInput.placeholder = "Precio original automático";
-        select.value = "";
-    }
-
-    function eliminarFila(boton, subtotalFila) {
-        boton.closest('tr').remove();
-        actualizarTotales(-subtotalFila);
-    }
-
-    function actualizarTotales(monto) {
-        totalNetoGlobal += monto;
-        const iva = totalNetoGlobal * 0.19;
-        const total = totalNetoGlobal + iva;
-        
-        document.getElementById('labelNeto').innerText = formatearMoneda(totalNetoGlobal);
-        document.getElementById('labelIva').innerText = formatearMoneda(iva);
-        document.getElementById('labelTotal').innerText = formatearMoneda(total);
-    }
-
-    function formatearMoneda(valor) {
-        return new Intl.NumberFormat('es-CL', { 
-            style: 'currency', 
-            currency: 'CLP',
-            minimumFractionDigits: 0
-        }).format(valor);
-    }
-
-    async function finalizarCotizacion() {
-        const clienteId = document.getElementById('clienteCotizacion').value;
-        const filas = document.querySelectorAll('#detalleCotizacion tr');
-        
-        if (!clienteId) return alert("Selecciona un cliente");
-        if (filas.length === 0) return alert("Agrega al menos un artículo a la lista");
-
-        const items = [];
-        filas.forEach(fila => {
-            items.push({
-                id: fila.getAttribute('data-id'),
-                cantidad: fila.cells[2].innerText,
-                precio_unitario: fila.getAttribute('data-precio-aplicado') 
-            });
+            nuevaFila.innerHTML = `
+                <td class="small fw-bold text-muted">${item.codigo}</td>
+                <td class="fw-semibold">${item.descripcion}</td>
+                <td class="text-center">${item.cantidad}</td>
+                <td class="text-end">${formatearMoneda(item.precio)}</td>
+                <td class="text-end fw-bold text-primary">${formatearMoneda(item.subtotal)}</td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger border-0" 
+                            onclick="eliminarFila(this, ${item.subtotal})">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </td>
+            `;
+            tabla.appendChild(nuevaFila);
+            actualizarTotales(item.subtotal);
         });
 
-        const totalFinal = totalNetoGlobal * 1.19;
-
-        try {
-            const response = await fetch('{% url "guardar_cotizacion_articulo" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({
-                    cliente_id: clienteId,
-                    items: items,
-                    total_final: totalFinal
-                })
-            });
-
-            const result = await response.json();
-            if (result.status === 'success') {
-                alert("¡Cotización #" + result.n_presupuesto + " guardada exitosamente!");
-                window.location.href = "{% url 'lista_cotizaciones_articulos' %}";
-            } else {
-                alert("Error: " + result.message);
-            }
-        } catch (e) {
-            alert("Error crítico de conexión con el servidor.");
+        // Seleccionar el cliente automáticamente en el select
+        const selectCliente = document.getElementById('clienteCotizacion');
+        if (selectCliente) {
+            selectCliente.value = "{{ cotizacion.cliente.id }}";
         }
+    {% endif %}
+});
+
+// ==========================================
+// 2. FUNCIONES DE INTERACCIÓN
+// ==========================================
+document.getElementById('selectArticulo').addEventListener('change', function() {
+    const option = this.options[this.selectedIndex];
+    const precioSugerido = option.getAttribute('data-precio');
+    document.getElementById('inputPrecio').placeholder = precioSugerido && precioSugerido !== "0" ? Math.round(precioSugerido) : "0";
+});
+
+function limpiarNumero(valor) {
+    if (valor === null || valor === undefined) return 0;
+
+    let limpio = String(valor).trim();
+
+    // Caso Chile/Latam: 4.000,22
+    if (limpio.includes('.') && limpio.includes(',')) {
+        limpio = limpio.replace(/\./g, '').replace(',', '.');
     }
+    // Caso: 4000,22
+    else if (limpio.includes(',')) {
+        limpio = limpio.replace(',', '.');
+    }
+
+    const numero = Number(limpio);
+    return isNaN(numero) ? 0 : numero;
+}
+
+function agregarArticulo() {
+    const select = document.getElementById('selectArticulo');
+    const cantidadInput = document.getElementById('inputCantidad');
+    const precioInput = document.getElementById('inputPrecio'); 
+    
+    if (select.value === "") return alert("Por favor, selecciona un artículo.");
+
+    const option = select.options[select.selectedIndex];
+    const id = select.value;
+    const codigo = option.getAttribute('data-codigo');
+    const descripcion = option.text.split(' ($')[0];
+    const precioOriginal = limpiarNumero(option.getAttribute('data-precio'));
+
+    let precioFinal = precioInput.value !== "" ? limpiarNumero(precioInput.value) : precioOriginal;
+    
+    if (precioFinal <= 0) return alert("El precio debe ser mayor a 0.");
+
+    const cantidad = parseInt(cantidadInput.value);
+    const subtotal = precioFinal * cantidad;
+
+    const tabla = document.getElementById('detalleCotizacion');
+    const fila = document.createElement('tr');
+    fila.setAttribute('data-id', id); 
+    fila.setAttribute('data-precio-aplicado', precioFinal); 
+
+    fila.innerHTML = `
+        <td class="small fw-bold text-muted">${codigo}</td>
+        <td class="fw-semibold">${descripcion}</td>
+        <td class="text-center">${cantidad}</td>
+        <td class="text-end">${formatearMoneda(precioFinal)}</td>
+        <td class="text-end fw-bold text-primary">${formatearMoneda(subtotal)}</td>
+        <td class="text-center">
+            <button class="btn btn-sm btn-outline-danger border-0" onclick="eliminarFila(this, ${subtotal})">
+                <i class="bi bi-trash-fill"></i>
+            </button>
+        </td>
+    `;
+    
+    tabla.appendChild(fila);
+    actualizarTotales(subtotal);
+
+    // Resetear campos
+    cantidadInput.value = 1;
+    precioInput.value = "";
+    precioInput.placeholder = "Precio original automático";
+    select.value = "";
+}
+
+function eliminarFila(boton, subtotalFila) {
+    boton.closest('tr').remove();
+    actualizarTotales(-subtotalFila);
+}
+
+function actualizarTotales(monto) {
+    totalNetoGlobal += monto;
+    const iva = totalNetoGlobal * 0.19;
+    const total = totalNetoGlobal + iva;
+    
+    document.getElementById('labelNeto').innerText = formatearMoneda(totalNetoGlobal);
+    document.getElementById('labelIva').innerText = formatearMoneda(iva);
+    document.getElementById('labelTotal').innerText = formatearMoneda(total);
+}
+
+function formatearMoneda(valor) {
+    return new Intl.NumberFormat('es-CL', { 
+        style: 'currency', 
+        currency: 'CLP',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(valor);
+}
+
+// ==========================================
+// 3. GUARDADO FINAL (NUEVO O EDICIÓN)
+// ==========================================
+async function finalizarCotizacion() {
+    // 1. Obtener datos necesarios
+    const clienteId = document.getElementById('clienteCotizacion').value;
+    const filas = document.querySelectorAll('#detalleCotizacion tr');
+    
+    // IMPORTANTE: n_presupuesto es la PK real de tu modelo CotizacionArticulo
+    const cotizacionIdExistente = "{{ cotizacion.n_presupuesto|default:'' }}"; 
+
+    // 2. Validaciones básicas
+    if (!clienteId) return Swal.fire({ icon: 'warning', title: 'Faltan datos', text: 'Selecciona un cliente.' });
+    if (filas.length === 0) return Swal.fire({ icon: 'warning', title: 'Lista vacía', text: 'Agrega al menos un artículo.' });
+
+    // 3. Recolectar artículos de la tabla
+    const items = [];
+    filas.forEach(fila => {
+        items.push({
+            id: fila.getAttribute('data-id'),
+            cantidad: fila.cells[2].innerText,
+            precio_unitario: fila.getAttribute('data-precio-aplicado') 
+        });
+    });
+
+    const totalFinal = totalNetoGlobal * 1.19;
+
+    // 4. Envío al servidor
+    try {
+        const response = await fetch('{% url "guardar_cotizacion_articulo" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                cliente_id: clienteId,
+                items: items,
+                total_final: totalFinal,
+                cotizacion_id: cotizacionIdExistente // Si este ID viaja, Django EDITA. Si no, CREA.
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            window.location.href = "{% url 'lista_cotizaciones_articulos' %}";
+        } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: result.message });
+        }
+    } catch (e) {
+        console.error(e);
+        Swal.fire({ icon: 'error', title: 'Error de red', text: 'No se pudo procesar la solicitud.' });
+    }
+}
 </script>
 {% endblock %}

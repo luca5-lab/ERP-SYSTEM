@@ -1,6 +1,7 @@
 {% extends 'usuarios/dashboard.html' %}
 
 {% block content %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -8,11 +9,11 @@
             <p class="text-white-50">Gestión de insumos al 100% y ajustes de stock</p>
         </div>
         
-        {% if request.user.is_superuser or request.user.perfil.tipo_usuario == 'administracion' or request.user.perfil.tipo_usuario == 'admin' %}
+        
         <button class="btn btn-primary rounded-pill px-4 shadow" data-bs-toggle="modal" data-bs-target="#modalNuevoMaterial">
             <i class="bi bi-plus-lg me-2"></i> INGRESAR NUEVO MATERIAL
         </button>
-        {% endif %}
+        
     </div>
 
     <div class="modal fade" id="modalEditarMaterial" tabindex="-1" aria-hidden="true">
@@ -58,31 +59,31 @@
                             <tr style="font-size: 0.7rem;" class="text-muted">
                                 <th class="ps-3">MATERIAL</th>
                                 <th class="text-center">STOCK</th>
-                                {% if request.user.is_superuser or request.user.perfil.tipo_usuario != 'diseno' and request.user.perfil.tipo_usuario != 'diseño' %}
+                                
                                 <th class="text-center">ACCIONES</th>
-                                {% endif %}
+                                
                             </tr>
                         </thead>
                         <tbody>
                             {% for item in categoria.list %}
                             <tr>
                                 <td class="ps-3">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <div class="fw-bold text-dark small">{{ item.nombre }}</div>
-                                            <div class="text-muted" style="font-size: 0.65rem;">{{ item.variedad }}</div>
-                                        </div>
-                                        {% if request.user.is_superuser or request.user.perfil.tipo_usuario != 'diseno' and request.user.perfil.tipo_usuario != 'diseño' %}
-                                        <button class="btn btn-sm text-primary p-0 btn-abrir-edicion shadow-none" 
-                                                data-id="{{ item.id }}" 
-                                                data-nombre="{{ item.nombre }}" 
-                                                data-variedad="{{ item.variedad }}">
-                                            <i class="bi bi-pencil-square" style="font-size: 0.8rem;"></i>
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </td>
-
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <div class="fw-bold text-dark small">{{ item.nombre }}</div>
+            <div class="text-muted" style="font-size: 0.65rem;">{{ item.variedad }}</div>
+        </div>
+        
+    
+        <button class="btn btn-sm text-primary p-0 btn-abrir-edicion shadow-none" 
+                data-id="{{ item.id }}" 
+                data-nombre="{{ item.nombre }}" 
+                data-variedad="{{ item.variedad }}">
+            <i class="bi bi-pencil-square" style="font-size: 0.8rem;"></i>
+        </button>
+        
+    </div>
+</td>
                                 <td class="text-center">
                                     <div class="progress mb-1" style="height: 6px;">
                                         <div class="progress-bar {% if item.nivel_actual <= 30 %}bg-danger{% elif item.nivel_actual <= 50 %}bg-warning{% else %}bg-success{% endif %}" 
@@ -91,20 +92,20 @@
                                     <small class="fw-bold">{{ item.nivel_actual }}%</small>
                                 </td>
                                 
-                                {% if request.user.is_superuser or request.user.perfil.tipo_usuario != 'diseno' and request.user.perfil.tipo_usuario != 'diseño' %}
+                                
                                 <td class="text-center">
                                     <div class="btn-group">
                                         <button class="btn btn-sm btn-outline-primary btn-adjust" data-id="{{ item.id }}" data-action="down" title="Restar 5%">-</button>
                                         <button class="btn btn-sm btn-outline-primary btn-adjust" data-id="{{ item.id }}" data-action="up" title="Sumar 5%">+</button>
                                         
-                                        {% if request.user.is_superuser or request.user.perfil.tipo_usuario == 'administracion' or request.user.perfil.tipo_usuario == 'admin' %}
-                                        <a href="{% url 'eliminar_material' item.id %}" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('¿Eliminar material?')">
+                                        
+                                        <a href="{% url 'eliminar_material' item.id %}" class="btn btn-sm btn-outline-danger border-0 btn-eliminar">
                                             <i class="bi bi-trash"></i>
                                         </a>
-                                        {% endif %}
+                                        
                                     </div>
                                 </td>
-                                {% endif %}
+                                
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -158,9 +159,20 @@
     </div>
 </div>
 
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- LÓGICA PARA EDITAR NOMBRE/VARIEDAD ---
+    
+    // Configuración para notificaciones rápidas (Toasts)
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: true,
+    });
+
+    // --- 1. LÓGICA PARA EDITAR NOMBRE/VARIEDAD ---
     const botonesEdicion = document.querySelectorAll('.btn-abrir-edicion');
     const modalEditarElem = document.getElementById('modalEditarMaterial');
     const modalEditar = new bootstrap.Modal(modalEditarElem);
@@ -191,15 +203,26 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                location.reload();
+                modalEditar.hide(); // Cierra el modal de edición
+                
+                // 🚀 CAMBIO AQUÍ: Usamos Toast en lugar de Swal.fire grande
+                Toast.fire({
+                    icon: 'success',
+                    title: '¡Información actualizada con éxito!'
+                }).then(() => {
+                    // Esperamos a que el Toast termine (2 segundos) y recargamos
+                    // para ver los cambios reflejados en la lista.
+                    location.reload(); 
+                });
             } else {
-                alert("Error al actualizar: " + (data.message || "Error desconocido"));
+                // Si hay un error, sí mantenemos la alerta grande para que sea visible
+                Swal.fire('Error', data.message || "No se pudo actualizar", 'error');
             }
         })
         .catch(error => console.error('Error:', error));
     });
 
-    // --- LÓGICA PARA AJUSTAR STOCK ---
+    // --- 2. LÓGICA PARA AJUSTAR STOCK (CON TOAST) ---
     const botonesAdjust = document.querySelectorAll('.btn-adjust');
 
     botonesAdjust.forEach(boton => {
@@ -211,7 +234,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const fila = this.closest('tr');
             const barra = fila.querySelector('.progress-bar');
             const textoNivel = fila.querySelector('small.fw-bold');
-            const cantidadCambio = 5;
 
             fetch("{% url 'actualizar_stock_ajax' %}", {
                 method: 'POST',
@@ -219,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-CSRFToken': '{{ csrf_token }}',
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `id=${materialId}&accion=${accion}&cantidad=${cantidadCambio}`
+                body: `id=${materialId}&accion=${accion}&cantidad=5`
             })
             .then(response => response.json())
             .then(data => {
@@ -228,19 +250,57 @@ document.addEventListener('DOMContentLoaded', function() {
                     barra.style.width = nivel + '%';
                     textoNivel.innerText = nivel + '%';
                     
-                    barra.className = 'progress-bar '; 
-                    if (nivel <= 30) {
-                        barra.classList.add('bg-danger');
-                    } else if (nivel <= 50) {
-                        barra.classList.add('bg-warning');
-                    } else {
-                        barra.classList.add('bg-success');
-                    }
+                    // Actualizar colores dinámicamente
+                    barra.className = 'progress-bar'; 
+                    if (nivel <= 30) barra.classList.add('bg-danger');
+                    else if (nivel <= 50) barra.classList.add('bg-warning');
+                    else barra.classList.add('bg-success');
+
+                    // Notificación rápida
+                    Toast.fire({
+                        icon: 'success',
+                        title: `Stock ${accion === 'up' ? 'aumentado' : 'reducido'} a ${nivel}%`
+                    });
                 }
             })
             .catch(error => console.error('Error:', error));
         });
     });
+
+    // --- 3. LÓGICA PARA ELIMINAR (CONFIRMACIÓN) ---
+    // Agrega la clase 'btn-eliminar' a tu etiqueta <a> de borrar en el HTML
+    document.querySelectorAll('.btn-eliminar').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const url = this.getAttribute('href');
+
+            Swal.fire({
+                title: '¿Eliminar material?',
+                text: "Esta acción no se puede deshacer",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = url;
+                }
+            });
+        });
+    });
+
+    // --- 4. DETECTAR MENSAJES DE DJANGO (Para "Material Creado") ---
+    // --- 4. DETECTAR MENSAJES DE DJANGO (Convertidos a Toast) ---
+    {% if messages %}
+        {% for message in messages %}
+            Toast.fire({
+                icon: '{{ message.tags }}' === 'error' ? 'error' : 'success',
+                title: '{{ message }}'
+            });
+        {% endfor %}
+    {% endif %}
 });
 </script>
 {% endblock %}

@@ -1,0 +1,249 @@
+{% extends 'usuarios/dashboard.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="tech-title h2 text-white mb-1">Nueva Orden de Compra</h1>
+            <p class="text-white-50">Generar pedido formal para proveedores - USBTech SPA</p>
+        </div>
+        <a href="{% url 'lista_ordenes_compra' %}" class="btn btn-outline-light rounded-pill">
+            <i class="bi bi-arrow-left"></i> Volver a la lista
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-lg p-4 mb-4" style="border-radius: 20px;">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-cart-plus me-2 text-primary"></i>Añadir Ítem</h5>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Seleccionar Proveedor</label>
+                    <select id="selectProveedor" class="form-select border-2 shadow-sm">
+                        <option value="">-- Seleccionar Proveedor --</option>
+                        {% for p in proveedores %}
+                        <option value="{{ p.id }}">{{ p.razon_social }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <hr>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Artículo / Insumo</label>
+                    <select id="selectArticulo" class="form-select shadow-sm border-2">
+                        <option value="" data-precio="0">-- Buscar Artículo --</option>
+                        {% for a in articulos %}
+                        <option value="{{ a.id }}" data-precio="{{ a.costo_compra|stringformat:'d' }}">
+                            {{ a.descripcion }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Cantidad</label>
+                        <input type="number" id="inputCantidad" class="form-control" value="1" min="1">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Costo Unit.</label>
+                        <input type="number" id="inputPrecio" class="form-control" placeholder="0">
+                    </div>
+                </div>
+
+                <button type="button" onclick="agregarItem()" class="btn btn-primary w-100 rounded-pill fw-bold mt-2">
+                    <i class="bi bi-plus-lg me-2"></i> AGREGAR A LA ORDEN
+                </button>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg p-4" style="border-radius: 20px;">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Descripción</th>
+                                <th class="text-center">Cant.</th>
+                                <th class="text-end">Costo Uni.</th>
+                                <th class="text-end">Subtotal</th>
+                                <th class="text-center"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="detalleOrden">
+                            </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 p-4 bg-light rounded-4 border border-white shadow-sm">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Total Neto:</span>
+                        <span id="labelNeto" class="fw-bold fs-5">$ 0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">IVA (19%):</span>
+                        <span id="labelIva" class="fw-bold fs-5">$ 0</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h3 tech-title text-primary mb-0">TOTAL ORDEN:</span>
+                        <span id="labelTotal" class="h3 fw-bold text-primary mb-0">$ 0</span>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button class="btn btn-success w-100 rounded-pill shadow fw-bold py-3" onclick="finalizarOrden()">
+                        <i class="bi bi-file-earmark-pdf me-2"></i> GENERAR ORDEN DE COMPRA
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const selectArticulo = document.getElementById('selectArticulo');
+    const inputPrecio = document.getElementById('inputPrecio');
+
+    // Escuchamos cuando el usuario cambia la selección del artículo
+    selectArticulo.addEventListener('change', function() {
+        // Obtenemos la opción seleccionada actualmente
+        const selectedOption = this.options[this.selectedIndex];
+
+        // Extraemos el valor del atributo data-precio que ya pusiste en el HTML
+        const precioSugerido = selectedOption.getAttribute('data-precio');
+
+        // Si existe un precio (y no es la opción por defecto), lo ponemos en el input
+        if (precioSugerido && precioSugerido !== "0") {
+            inputPrecio.value = precioSugerido;
+        } else {
+            inputPrecio.value = ""; // Limpiar si selecciona la opción por defecto
+        }
+    });
+});
+    let netoTotal = 0;
+
+    function agregarItem() {
+        const selectA = document.getElementById('selectArticulo');
+        const cantInp = document.getElementById('inputCantidad');
+        const precInp = document.getElementById('inputPrecio');
+
+        // Validaciones básicas
+        if (!selectA.value) return alert("Selecciona un artículo");
+
+        const id = selectA.value;
+        const descripcion = selectA.options[selectA.selectedIndex].text;
+        const cantidad = parseInt(cantInp.value);
+        const precio = parseFloat(precInp.value) || 0;
+
+        if (cantidad <= 0) return alert("La cantidad debe ser mayor a 0");
+        if (precio <= 0) return alert("Ingresa un precio de costo válido");
+
+        const subtotal = cantidad * precio;
+        const tabla = document.getElementById('detalleOrden');
+
+        // Crear la fila
+        const fila = document.createElement('tr');
+        fila.setAttribute('data-id', id);
+        fila.setAttribute('data-precio', precio);
+        fila.setAttribute('data-cantidad', cantidad);
+
+        fila.innerHTML = `
+            <td class="fw-semibold">${descripcion}</td>
+            <td class="text-center">${cantidad}</td>
+            <td class="text-end">$${precio.toLocaleString('es-CL')}</td>
+            <td class="text-end fw-bold text-primary">$${subtotal.toLocaleString('es-CL')}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-danger border-0" onclick="eliminarFila(this)">
+                    <i class="bi bi-trash-fill"></i>
+                </button>
+            </td>
+        `;
+
+        tabla.appendChild(fila);
+
+        // Recalcular totales después de agregar
+        recalcularTotales();
+
+        // Resetear campos de entrada
+        precInp.value = "";
+        selectA.value = "";
+        cantInp.value = "1";
+    }
+
+    function eliminarFila(btn) {
+        // Elimina la fila de la tabla
+        btn.closest('tr').remove();
+        // Recalcular totales después de eliminar
+        recalcularTotales();
+    }
+
+    function recalcularTotales() {
+        let nuevoNeto = 0;
+        const filas = document.querySelectorAll('#detalleOrden tr');
+
+        // Recorremos todas las filas actuales para sumar el neto
+        filas.forEach(f => {
+            const c = parseInt(f.getAttribute('data-cantidad'));
+            const p = parseFloat(f.getAttribute('data-precio'));
+            nuevoNeto += (c * p);
+        });
+
+        netoTotal = nuevoNeto;
+        const iva = Math.round(netoTotal * 0.19);
+        const total = netoTotal + iva;
+
+        // Actualizar etiquetas en el HTML
+        document.getElementById('labelNeto').innerText = "$" + netoTotal.toLocaleString('es-CL');
+        document.getElementById('labelIva').innerText = "$" + iva.toLocaleString('es-CL');
+        document.getElementById('labelTotal').innerText = "$" + total.toLocaleString('es-CL');
+    }
+
+    async function finalizarOrden() {
+        const provId = document.getElementById('selectProveedor').value;
+        const filas = document.querySelectorAll('#detalleOrden tr');
+
+        if (!provId) return alert("Debes seleccionar un proveedor antes de finalizar.");
+        if (filas.length === 0) return alert("La orden debe tener al menos un artículo.");
+
+        // Preparar los datos para el servidor
+        const items = Array.from(filas).map(f => ({
+            id: f.getAttribute('data-id'),
+            cantidad: f.getAttribute('data-cantidad'),
+            precio: f.getAttribute('data-precio')
+        }));
+
+        const totalConIva = netoTotal * 1.19;
+
+        try {
+            const response = await fetch('{% url "guardar_orden_compra" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    proveedor_id: provId,
+                    items: items,
+                    total: totalConIva
+                })
+            });
+
+            const res = await response.json();
+
+            if (res.status === 'success') {
+                // Redirigir a la lista de órdenes si todo salió bien
+                window.location.href = "{% url 'lista_ordenes_compra' %}";
+            } else {
+                alert("Error al guardar: " + res.message);
+            }
+        } catch (error) {
+            console.error("Error en la petición:", error);
+            alert("Ocurrió un error de red o de servidor. Revisa la consola.");
+        }
+    }
+</script>
+{% endblock %}

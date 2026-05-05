@@ -136,28 +136,99 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- PAGINADOR -->
+        {% if articulos.paginator.num_pages > 1 %}
+        <div class="d-flex justify-content-center mt-4">
+            <nav>
+                <ul class="pagination pagination-sm shadow-sm">
+
+                    {% if articulos.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ articulos.previous_page_number }}{% if busqueda_codigo %}&codigo={{ busqueda_codigo }}{% endif %}{% if busqueda_familia %}&familia={{ busqueda_familia }}{% endif %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in articulos.paginator.page_range %}
+                        {% if articulos.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > articulos.number|add:'-3' and num < articulos.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if busqueda_codigo %}&codigo={{ busqueda_codigo }}{% endif %}{% if busqueda_familia %}&familia={{ busqueda_familia }}{% endif %}">
+                                    {{ num }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if articulos.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ articulos.next_page_number }}{% if busqueda_codigo %}&codigo={{ busqueda_codigo }}{% endif %}{% if busqueda_familia %}&familia={{ busqueda_familia }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
     </div>
 </div>
 
 <style>
-    .table thead th {
-        border: none;
-        letter-spacing: 1px;
-    }
+.table thead th {
+    border: none;
+    letter-spacing: 1px;
+}
 
-    .table tbody td {
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-        padding: 15px 10px;
-    }
+.table tbody td {
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding: 15px 10px;
+}
 
-    .btn-group .btn:hover {
-        background-color: rgba(13, 110, 253, 0.1);
-        transform: scale(1.1);
-        transition: all 0.2s;
-    }
+.btn-group .btn:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    transform: scale(1.1);
+    transition: all 0.2s;
+}
+/* PAGINADOR CIRCULAR NEGRO */
+
+.pagination .page-link{
+    border-radius:50%;
+    width:36px;
+    height:36px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:0 4px;
+    border:none;
+    background:#f1f1f1;
+    color:#000;
+    font-weight:500;
+    transition:all 0.2s ease;
+}
+
+.pagination .page-link:hover{
+    background:#000;
+    color:#fff;
+    transform:scale(1.1);
+}
+
+.pagination .page-item.active .page-link{
+    background:#000;
+    color:#fff;
+    box-shadow:0 0 0 2px rgba(0,0,0,0.15);
+}
 </style>
 
 <script>
+// --- TU FUNCIÓN DE ELIMINAR (Mantenida) ---
 function confirmarEliminacion(id, codigo) {
     Swal.fire({
         title: '¿Eliminar artículo?',
@@ -174,5 +245,26 @@ function confirmarEliminacion(id, codigo) {
         }
     })
 }
+
+// --- NUEVO: TOAST PARA MENSAJES DE ÉXITO/ERROR ---
+document.addEventListener('DOMContentLoaded', function() {
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+    });
+
+    {% if messages %}
+        {% for message in messages %}
+            Toast.fire({
+                icon: "{% if message.tags == 'error' %}error{% else %}success{% endif %}",
+                title: "{{ message|escapejs }}"
+            });
+        {% endfor %}
+    {% endif %}
+});
 </script>
+
 {% endblock %}

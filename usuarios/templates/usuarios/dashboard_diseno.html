@@ -9,60 +9,44 @@
             <h1 class="tech-title h2 text-white mb-1">Panel de Diseño</h1>
             <p class="text-white-50">Gestión Creativa y Pre-prensa - USBTech SPA</p>
         </div>
-        <button class="btn btn-primary shadow-sm btn-tech py-2 px-4" data-bs-toggle="collapse" data-bs-target="#formProceso">
-            <i class="bi bi-plus-square-fill me-2"></i> NUEVO PROYECTO DE DISEÑO
-        </button>
     </div>
 
     <div class="collapse mb-4" id="formProceso">
-    <div class="card border-0 shadow-lg p-4" style="background: rgba(255, 255, 255, 0.95); border-radius: 20px;">
-        <form method="POST">
-            {% csrf_token %}
-            
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="p-3 rounded-3 bg-light border-start border-5 border-primary shadow-sm">
-                        <h6 class="fw-bold text-primary tech-title small text-uppercase mb-2">Cliente Destino</h6>
-                        {{ form.cliente|as_crispy_field }}
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="p-3 rounded-3 bg-light border-start border-5 border-secondary shadow-sm">
-                        <h6 class="fw-bold text-secondary tech-title small text-uppercase mb-2">RESPONSABLE PROYECTO:</h6>
-                        {{ form.responsable_proyecto|as_crispy_field }}
-                    </div>
-                </div>
-            </div>
+        <div class="card border-0 shadow-lg p-4" style="background: rgba(255, 255, 255, 0.95); border-radius: 20px;">
+            <form method="POST">
+                {% csrf_token %}
+                
+                
 
-            <div class="row g-4 text-dark">
-                <div class="col-md-6">
-                    <div class="p-4 rounded-4 bg-white border-top border-info border-5 shadow-sm h-100">
-                        <h6 class="fw-bold text-info mb-3 tech-title small text-uppercase">DISEÑO:</h6>
-                        {{ form.reunion|as_crispy_field }}
-                        {{ form.pauta|as_crispy_field }}
-                        {{ form.enviado_correccion|as_crispy_field }}
+                <div class="row g-4 text-dark">
+                    <div class="col-md-6">
+                        <div class="p-4 rounded-4 bg-white border-top border-info border-5 shadow-sm h-100">
+                            <h6 class="fw-bold text-info mb-3 tech-title small text-uppercase">DISEÑO:</h6>
+                            {{ form.reunion|as_crispy_field }}
+                            {{ form.pauta|as_crispy_field }}
+                            {{ form.enviado_correccion|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="p-4 rounded-4 bg-white border-top border-warning border-5 shadow-sm h-100">
+                            <h6 class="fw-bold text-warning mb-3 tech-title small text-uppercase">CORRECCIÓN:</h6>
+                            {{ form.correccion_1|as_crispy_field }}
+                            {{ form.correccion_2|as_crispy_field }}
+                            {{ form.correccion_3|as_crispy_field }}
+                            <hr>
+                            <h6 class="fw-bold text-success mb-2 tech-title small text-uppercase">APROBACIÓN FINAL:</h6>
+                            {{ form.aprobacion_final|as_crispy_field }}
+                        </div>
                     </div>
                 </div>
 
-                <div class="col-md-6">
-                    <div class="p-4 rounded-4 bg-white border-top border-warning border-5 shadow-sm h-100">
-                        <h6 class="fw-bold text-warning mb-3 tech-title small text-uppercase">CORRECCIÓN:</h6>
-                        {{ form.correccion_1|as_crispy_field }}
-                        {{ form.correccion_2|as_crispy_field }}
-                        {{ form.correccion_3|as_crispy_field }}
-                        <hr>
-                        <h6 class="fw-bold text-success mb-2 tech-title small text-uppercase">APROBACIÓN FINAL:</h6>
-                        {{ form.aprobacion_final|as_crispy_field }}
-                    </div>
+                <div class="text-end mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg px-5 shadow-sm btn-tech">GUARDAR AVANCE DISEÑO</button>
                 </div>
-            </div>
-
-            <div class="text-end mt-4">
-                <button type="submit" class="btn btn-primary btn-lg px-5 shadow-sm btn-tech">GUARDAR AVANCE DISEÑO</button>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
 
     <div class="card border-0 shadow-lg p-4" style="background: rgba(255, 255, 255, 0.9); border-radius: 20px;">
         <h5 class="tech-title mb-4 text-dark"><i class="bi bi-clock-history"></i> PROYECTOS EN CURSO</h5>
@@ -70,73 +54,255 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-dark">
                     <tr class="tech-title" style="font-size: 0.75rem;">
-                        <th class="ps-4">CLIENTE / RESPONSABLE</th>
-                        <th>ESTADO DISEÑO</th>
+                        <th class="ps-4">CLIENTE / SERVICIO</th>
+                        <th>PROYECTO</th> <th>ESTADO DISEÑO</th>
                         <th>CORRECCIONES</th>
                         <th class="text-center">APROBACIÓN</th>
                         <th class="text-center">GESTIÓN</th> 
                     </tr>
                 </thead>
                 <tbody class="text-dark">
-                    {% for proceso in procesos %}
-                    {% if proceso.estado == 'diseno' %}
-                    <tr class="bg-white">
-                        <td class="ps-4">
-                            <div class="fw-bold text-primary text-uppercase">{{ proceso.cliente.razon_social }}</div>
-                            <div class="text-muted small">Resp: {{ proceso.responsable_proyecto|default:"Sin asignar" }}</div>
-                        </td>
-                        <td>
-                            {% if proceso.reunion %}<i class="bi bi-check-circle-fill text-success"></i> Reunión<br>{% endif %}
-                            {% if proceso.pauta %}<i class="bi bi-check-circle-fill text-success"></i> Pauta<br>{% endif %}
-                            {% if proceso.enviado_correccion %}<i class="bi bi-send-check text-info"></i> Enviado{% endif %}
-                        </td>
-                        <td>
-                            <span class="badge {% if proceso.correccion_1 %}bg-warning{% else %}bg-light text-muted{% endif %}">C1</span>
-                            <span class="badge {% if proceso.correccion_2 %}bg-warning{% else %}bg-light text-muted{% endif %}">C2</span>
-                            <span class="badge {% if proceso.correccion_3 %}bg-warning{% else %}bg-light text-muted{% endif %}">C3</span>
-                        </td>
-                        <td class="text-center">
-                            {% if proceso.aprobacion_final %}
-                                <span class="badge bg-success"><i class="bi bi-hand-thumbs-up"></i> LISTO</span>
-                            {% else %}
-                                <span class="badge bg-secondary">PENDIENTE</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            <div class="btn-group">
-                                <a href="{% url 'editar_proceso_diseno' proceso.pk %}" class="btn btn-sm btn-outline-primary" title="Editar Checklist">
-                                    <i class="bi bi-pencil-square"></i>
-                                </a>
+    {% for proceso in procesos %}
+    {% if proceso.estado == 'diseno' %}
+    <tr>
+        <td class="ps-4">
+            <div class="fw-bold text-primary text-uppercase">{{ proceso.cliente.razon_social }}</div>
+            
+            {% if proceso.fecha_entrega %}
+            <div class="mt-1">
+                <span class="badge {% if proceso.esta_atrasado %}bg-danger animate-pulse{% else %}bg-dark{% endif %}" style="font-size: 0.7rem;">
+                    <i class="bi bi-clock"></i> ENTREGA: {{ proceso.fecha_entrega|date:"d/m/Y" }}
+                </span>
+            </div>
+            {% endif %}
 
-                                {% if proceso.aprobacion_final %}
-                                    {% if proceso.pasa_por_taller %}
-                                        <a href="{% url 'pasar_a_taller' proceso.pk %}" class="btn btn-sm btn-success fw-bold">
-                                            ENVIAR A TALLER <i class="bi bi-arrow-right"></i>
-                                        </a>
-                                    {% else %}
-                                        <a href="{% url 'pasar_a_taller' proceso.pk %}" class="btn btn-sm btn-info text-dark fw-bold">
-                                            FINALIZAR PROYECTO <i class="bi bi-check-all"></i>
-                                        </a>
-                                    {% endif %}
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endif %}
-                    {% empty %}
-                    <tr><td colspan="5" class="text-center py-5 text-muted">No hay proyectos en etapa de diseño.</td></tr>
+            <div class="mb-1 mt-1">
+                <span class="badge bg-info text-dark" style="font-size: 0.65rem;">
+                    <i class="bi bi-tag-fill"></i> {{ proceso.get_familia_display|upper }}
+                </span>
+                
+                {% if proceso.fotos_terreno.all %}
+                <button class="btn btn-link p-0 ms-2 text-danger text-decoration-none shadow-none" 
+                        data-bs-toggle="modal" data-bs-target="#modalFotos{{ proceso.pk }}"
+                        title="Ver fotos de terreno">
+                    <i class="bi bi-camera-fill"></i> 
+                    <small class="fw-bold">{{ proceso.fotos_terreno.count }}</small>
+                </button>
+                {% endif %}
+            </div>
+
+            <div class="text-muted small">Resp: {{ proceso.responsable_diseno|default:"Sin asignar" }}</div>
+
+            {% if proceso.fotos_terreno.all %}
+            <div class="modal fade" id="modalFotos{{ proceso.pk }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+            <div class="modal-header bg-danger text-white text-center">
+                <h5 class="modal-title tech-title small uppercase w-100">
+                    <i class="bi bi-folder2-open me-2"></i>Archivos de Terreno: {{ proceso.cliente.razon_social }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <div class="row g-3">
+                    {% for foto in proceso.fotos_terreno.all %}
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 shadow-sm overflow-hidden">
+                            {% if ".pdf" in foto.imagen.url|lower %}
+                                <div class="d-flex flex-column align-items-center justify-content-center p-3 bg-white" style="height: 200px;">
+                                    <i class="bi bi-file-earmark-pdf-fill text-danger" style="font-size: 4rem;"></i>
+                                    <span class="small text-muted text-truncate w-100 text-center mt-2">Documento PDF</span>
+                                    <a href="{{ foto.imagen.url }}" target="_blank" class="btn btn-danger btn-sm mt-2 w-100 shadow-sm">
+                                        <i class="bi bi-eye"></i> Abrir PDF
+                                    </a>
+                                </div>
+                            {% else %}
+                                <a href="{{ foto.imagen.url }}" target="_blank">
+                                    <img src="{{ foto.imagen.url }}" class="img-fluid hover-zoom" 
+                                         style="height: 200px; width: 100%; object-fit: cover;">
+                                </a>
+                                <div class="p-1 bg-white text-center">
+                                    <small class="text-muted" style="font-size: 0.6rem;">Imagen Registro</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
                     {% endfor %}
-                </tbody>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+            {% endif %}
+        </td>
+
+        <td style="max-width: 250px;">
+    {% if proceso.observaciones_terreno %}
+        <div class="p-2 rounded bg-warning bg-opacity-10 border-start border-warning border-3 shadow-sm mb-1">
+            <small class="text-dark fw-bold" style="font-size: 0.75rem; line-height: 1.2; display: block;">
+                <i class="bi bi-info-circle-fill text-warning me-1"></i>
+                {{ proceso.observaciones_terreno|linebreaksbr }}
+            </small>
+        </div>
+    {% endif %}
+
+    {% if proceso.terminaciones %}
+        <div class="p-2 rounded bg-primary bg-opacity-10 border-start border-primary border-3 shadow-sm mb-1">
+            <small class="text-dark" style="font-size: 0.75rem; line-height: 1.2; display: block;">
+                <i class="bi bi-gear-fill text-primary me-1"></i>
+                <strong>TERMINACIONES:</strong> {{ proceso.terminaciones }}
+            </small>
+        </div>
+    {% endif %}
+
+    {% if proceso.mediciones_json and proceso.mediciones_json != "[]" %}
+        <div class="mt-1">
+            <button class="btn btn-sm btn-danger w-100 py-0 fw-bold shadow-sm" 
+                    style="font-size: 0.65rem; border-radius: 5px;" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#meds{{ proceso.pk }}">
+                <i class="bi bi-rulers me-1"></i> VER {{ proceso.get_mediciones_list|length }} MEDICIONES
+            </button>
+            
+            <div class="collapse" id="meds{{ proceso.pk }}">
+                <div class="p-2 mt-1 bg-white border border-danger border-opacity-25 rounded shadow-sm">
+                    <table class="table table-sm table-borderless mb-0" style="font-size: 0.7rem; line-height: 1;">
+                        <thead class="border-bottom">
+                            <tr class="text-muted" style="font-size: 0.6rem;">
+                                <th>DESC.</th>
+                                <th>MEDIDA</th>
+                                <th class="text-center">C.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for med in proceso.get_mediciones_list %}
+                            <tr class="border-bottom-0">
+                                <td class="text-truncate" style="max-width: 80px;">{{ med.descripcion }}</td>
+                                <td class="fw-bold text-danger">{{ med.largo }}x{{ med.ancho }}</td>
+                                <td class="text-center">{{ med.cantidad }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if not proceso.instrucciones_admin and not proceso.terminaciones and not proceso.observaciones_terreno and not proceso.mediciones_json %}
+        <span class="text-muted small italic">Sin instrucciones ni medidas</span>
+    {% endif %}
+</td>
+
+        <td>
+            {% if proceso.reunion %}<i class="bi bi-check-circle-fill text-success"></i> Reunión<br>{% endif %}
+            {% if proceso.pauta %}<i class="bi bi-check-circle-fill text-success"></i> Pauta<br>{% endif %}
+            {% if proceso.enviado_correccion %}<i class="bi bi-send-check text-info"></i> Enviado{% endif %}
+        </td>
+
+        <td>
+            <span class="badge {% if proceso.correccion_1 %}bg-warning{% else %}bg-light text-muted{% endif %}">C1</span>
+            <span class="badge {% if proceso.correccion_2 %}bg-warning{% else %}bg-light text-muted{% endif %}">C2</span>
+            <span class="badge {% if proceso.correccion_3 %}bg-warning{% else %}bg-light text-muted{% endif %}">C3</span>
+        </td>
+
+        <td class="text-center">
+            {% if proceso.aprobacion_final %}
+                <span class="badge bg-success"><i class="bi bi-hand-thumbs-up"></i> LISTO</span>
+            {% else %}
+                <span class="badge bg-secondary">PENDIENTE</span>
+            {% endif %}
+        </td>
+
+        <td class="text-center">
+            <div class="btn-group">
+                <a href="{% url 'editar_proceso_diseno' proceso.pk %}" class="btn btn-outline-primary btn-sm" title="Editar / Diseñar">
+                    <i class="bi bi-pencil-square fs-5"></i>
+                </a>
+
+                {% if proceso.aprobacion_final %}
+                    {% if proceso.pasa_por_taller %}
+                        <a href="{% url 'pasar_a_taller' proceso.pk %}" class="btn btn-warning btn-sm ms-2 shadow-sm fw-bold animate-fade-in" style="font-size: 0.7rem; color: #000;">
+                            <i class="bi bi-tools"></i> ENVIAR A TALLER
+                        </a>
+                    {% else %}
+                        <a href="{% url 'pasar_a_taller' proceso.pk %}" class="btn btn-success btn-sm ms-2 shadow-sm fw-bold animate-fade-in" style="font-size: 0.7rem;">
+                            <i class="bi bi-send-check-fill"></i> ENVIAR A ADMIN
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <button class="btn btn-secondary btn-sm ms-2 opacity-50 fw-bold" style="font-size: 0.7rem; cursor: not-allowed;" title="Primero marca la Aprobación Final" disabled>
+                        <i class="bi bi-lock-fill"></i> EN ESPERA...
+                    </button>
+                {% endif %}
+            </div>
+        </td>
+    </tr>
+    {% endif %}
+    {% empty %}
+    <tr><td colspan="6" class="text-center py-5 text-muted">No hay proyectos en etapa de diseño.</td></tr>
+    {% endfor %}
+</tbody>
             </table>
         </div>
     </div>
 </div>
+<script>
+    // Configuración base para el Toast
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+    });
 
+    // Detectar mensajes de Django
+    {% if messages %}
+        {% for message in messages %}
+            Toast.fire({
+                icon: '{% if message.tags == "error" %}error{% else %}success{% endif %}',
+                title: '{{ message|escapejs }}'
+            });
+        {% endfor %}
+    {% endif %}
+</script>
 <style>
-    /* Mantengo tus estilos originales y añado mejoras */
-    .tech-title { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
-    .badge { font-size: 0.7rem; }
-    .custom-check .form-check { margin-bottom: 5px; background: rgba(0,0,0,0.02); padding: 8px 10px 8px 30px; border-radius: 6px; }
-    .btn-tech { font-family: 'Orbitron', sans-serif; font-size: 0.8rem; }
+    .hover-zoom {
+        transition: transform 0.3s ease;
+    }
+    .hover-zoom:hover {
+        transform: scale(1.05);
+        cursor: pointer;
+    }
+    .modal-header .tech-title {
+        letter-spacing: 2px;
+    }
 </style>
+<style>
+    /* Animación para fechas atrasadas */
+    @keyframes pulse-red {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+        70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
+    .animate-pulse {
+        animation: pulse-red 2s infinite;
+        display: inline-block;
+    }
+
+    .hover-zoom {
+        transition: transform 0.3s ease;
+    }
+    .hover-zoom:hover {
+        transform: scale(1.05);
+        cursor: pointer;
+    }
+</style>
+
 {% endblock %}

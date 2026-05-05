@@ -1,0 +1,220 @@
+{% extends 'usuarios/dashboard.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="text-white fw-bold mb-0">Ventas Realizadas</h2>
+            <p class="text-white-50">Registro de ingresos liquidados</p>
+        </div>
+        <div class="bg-success text-white p-3 rounded-circle shadow-lg d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+            <i class="bi bi-graph-up-arrow fs-3"></i>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius: 20px;">
+        <div class="card-body p-4">
+
+            <!-- BUSCADOR -->
+            <form method="get" class="mb-4">
+                <div class="row g-2 align-items-center">
+
+                    <div class="col-md-3">
+                        <div class="input-group shadow-sm">
+                            <span class="input-group-text bg-success text-white">
+                                <i class="bi bi-receipt"></i>
+                            </span>
+                            <input type="text" name="factura" class="form-control"
+                                   placeholder="N° Factura..."
+                                   value="{{ busqueda_factura|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="input-group shadow-sm">
+                            <span class="input-group-text bg-success text-white">
+                                <i class="bi bi-person-badge"></i>
+                            </span>
+                            <input type="text" name="rut" class="form-control"
+                                   placeholder="RUT Cliente..."
+                                   value="{{ busqueda_rut|default:'' }}">
+                        </div>
+                    </div>
+
+                    
+                    
+
+                    <div class="col-md-auto">
+                        <button class="btn btn-success shadow-sm">
+                            Buscar
+                        </button>
+
+                        {% if busqueda_factura or busqueda_rut or busqueda_estado %}
+                        <a href="{% url 'lista_ventas' %}" class="btn btn-outline-secondary ms-2">
+                            Limpiar
+                        </a>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="bg-light">
+                        <tr class="text-muted small text-uppercase">
+                            <th>N° Factura</th>
+                            <th>Fecha de Pago</th>
+                            <th>Cliente / RUT</th>
+                            <th>Estado</th>
+                            <th class="text-end">Monto Neto (Sin IVA)</th>
+                            <th class="text-end">Monto Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in ventas %}
+                        <tr>
+                            <td class="fw-bold text-primary">#{{ v.n_factura }}</td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span>{{ v.fecha_registro|date:"d/m/Y" }}</span>
+                                    <small class="text-muted" style="font-size: 0.7rem;">{{ v.fecha_registro|date:"H:i" }} hrs</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold">{{ v.cliente.razon_social }}</span>
+                                    <small class="text-muted">{{ v.cliente.rut }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-success-subtle text-success border border-success px-3">PAGADO</span>
+                            </td>
+                            <td class="text-end text-muted">
+                                ${{ v.monto_neto|intcomma }}
+                                <input type="hidden" class="val-neto" value="{{ v.monto_neto }}">
+                            </td>
+                            <td class="text-end fw-bold text-dark">
+                                ${{ v.monto_total|intcomma }}
+                                <input type="hidden" class="val-total" value="{{ v.monto_total }}">
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>
+                                No hay ventas registradas actualmente.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- PAGINADOR -->
+            {% if ventas.paginator.num_pages > 1 %}
+            <div class="d-flex justify-content-center mt-4">
+                <nav>
+                    <ul class="pagination pagination-sm shadow-sm">
+
+                        {% if ventas.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ ventas.previous_page_number }}{% if busqueda_factura %}&factura={{ busqueda_factura }}{% endif %}{% if busqueda_rut %}&rut={{ busqueda_rut }}{% endif %}{% if busqueda_estado %}&estado={{ busqueda_estado }}{% endif %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in ventas.paginator.page_range %}
+
+                        {% if ventas.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+
+                        {% elif num > ventas.number|add:'-3' and num < ventas.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if busqueda_factura %}&factura={{ busqueda_factura }}{% endif %}{% if busqueda_rut %}&rut={{ busqueda_rut }}{% endif %}{% if busqueda_estado %}&estado={{ busqueda_estado }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% endfor %}
+
+                        {% if ventas.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ ventas.next_page_number }}{% if busqueda_factura %}&factura={{ busqueda_factura }}{% endif %}{% if busqueda_rut %}&rut={{ busqueda_rut }}{% endif %}{% if busqueda_estado %}&estado={{ busqueda_estado }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+<style>
+
+/* PAGINADOR CIRCULAR */
+
+.pagination .page-link{
+    border-radius:50%;
+    width:36px;
+    height:36px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:0 4px;
+    border:none;
+    background:#f1f1f1;
+    color:#000;
+    font-weight:500;
+    transition:all 0.2s ease;
+}
+
+.pagination .page-link:hover{
+    background:#000;
+    color:#fff;
+    transform:scale(1.1);
+}
+
+.pagination .page-item.active .page-link{
+    background:#000;
+    color:#fff;
+    box-shadow:0 0 0 2px rgba(0,0,0,0.15);
+}
+
+</style>
+
+<script>
+    // Lógica para calcular los totales de la tabla automáticamente
+    document.addEventListener('DOMContentLoaded', function() {
+        let netoTotal = 0;
+        let brutoTotal = 0;
+
+        document.querySelectorAll('.val-neto').forEach(el => {
+            netoTotal += parseFloat(el.value) || 0;
+        });
+        document.querySelectorAll('.val-total').forEach(el => {
+            brutoTotal += parseFloat(el.value) || 0;
+        });
+
+        const formatter = new Intl.NumberFormat('es-CL', { 
+            style: 'currency', 
+            currency: 'CLP', 
+            minimumFractionDigits: 0 
+        });
+
+        document.getElementById('neto_total').textContent = formatter.format(netoTotal);
+        document.getElementById('bruto_total').textContent = formatter.format(brutoTotal);
+    });
+</script>
+
+{% endblock %}

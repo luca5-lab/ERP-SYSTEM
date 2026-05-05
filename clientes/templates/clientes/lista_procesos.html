@@ -21,7 +21,6 @@
                         <th>ESTADO ACTUAL</th>
                         <th style="width: 30%;">PROGRESO</th>
                         <th>RESPONSABLE</th>
-                        <th class="text-center">ACCIONES</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -48,9 +47,6 @@
                             {% endwith %}
                         </td>
                         <td>{{ proceso.responsable_proyecto|default:"Sin asignar" }}</td>
-                        <td class="text-center">
-                            <a href="#" class="btn btn-sm btn-primary">Ver Detalles</a>
-                        </td>
                     </tr>
                     {% empty %}
                     <tr>

@@ -1,0 +1,1010 @@
+{% extends "usuarios/dashboard.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+        <form method="POST" action="{% url 'editar_proceso_admin' proceso.id %}" enctype="multipart/form-data" >
+            {% csrf_token %}
+            <input type="hidden" id="proceso_id" name="proceso_id">
+            
+            <div class="modal-header bg-dark text-white border-bottom border-secondary">
+                <h5 class="modal-title tech-title text-primary">
+                    <i class="bi bi-rocket-takeoff me-2"></i>CONFIGURAR NUEVO PROYECTO
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body p-4" style="background-color: #f8f9fa; color: #333;">
+                
+                <div class="row mb-4">
+    <div class="col-md-6">
+            <label class="form-label fw-bold text-dark small uppercase">CLIENTE / RAZÓN SOCIAL</label>
+            <select name="cliente_id" class="form-select border-2 shadow-sm" required>
+                <option value="" disabled {% if not proceso.cliente %}selected{% endif %}>
+                    Seleccione un cliente...
+                </option>
+
+                {% for cliente in clientes %}
+                <option value="{{ cliente.id }}"
+                    {% if proceso.cliente.id == cliente.id %}selected{% endif %}>
+                    {{ cliente.razon_social }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label fw-bold text-dark small uppercase">FAMILIA DE SERVICIO</label>
+            <select name="familia" class="form-select border-2 shadow-sm" required>
+                <option value="" disabled selected>Seleccione una familia...</option>
+                {% for valor, etiqueta in familias_servicios %}
+                <option value="{{ valor }}"
+                {% if proceso.familia == valor %}selected{% endif %}>
+                {{ etiqueta }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-12 mb-3">
+    <label class="form-label small fw-bold text-primary uppercase">
+        <i class="bi bi-calendar-event me-1"></i> Fecha de Entrega
+    </label>
+    <input type="date"
+name="fecha_entrega"
+id="fecha_entrega"
+value="{{ proceso.fecha_entrega|date:'Y-m-d' }}"
+class="form-control border-2 shadow-sm">
+    <div class="form-text">Esta fecha será visible para los diseñadores y el equipo de taller.</div>
+</div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold text-dark small">DISEÑO</label>
+            <div class="form-check form-switch p-2 rounded border bg-white shadow-sm">
+                <input class="form-check-input ms-0 me-2"
+type="checkbox"
+name="pasa_por_diseno"
+id="switchDiseno"
+{% if proceso.pasa_por_diseno %}checked{% endif %}>
+                <label class="form-check-label small fw-bold text-primary">ACTIVAR DISEÑO</label>
+            </div>
+            <div id="div_responsable_diseno" class="mt-2 animate__animated animate__fadeIn">
+    <label class="form-label mb-0 small fw-bold text-muted">Responsable Diseño:</label>
+    <select name="responsable_diseno" id="select_diseno" class="form-select form-select-sm border-primary shadow-sm">
+        <option value="">-- Seleccionar --</option>
+        {% for u in usuarios_diseno %}
+            <option value="{{ u.username }}"
+            {% if proceso.responsable_diseno == u.username %}selected{% endif %}>
+                {% if u.first_name %}{{ u.first_name }} {{ u.last_name }}{% else %}{{ u.username|upper }}{% endif %}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold text-dark small">TALLER</label>
+            <div class="form-check form-switch p-2 rounded border bg-white shadow-sm">
+                <input class="form-check-input ms-0 me-2"
+type="checkbox"
+name="pasa_por_taller"
+id="switchTaller"
+{% if proceso.pasa_por_taller %}checked{% endif %}>
+                <label class="form-check-label small fw-bold text-success">ACTIVAR TALLER</label>
+            </div>
+            <div id="div_responsable_taller" class="mt-2 animate__animated animate__fadeIn">
+    <label class="form-label mb-0 small fw-bold text-muted">Responsable Taller:</label>
+    <select name="responsable_taller" id="select_taller" class="form-select form-select-sm border-success shadow-sm">
+        <option value="">-- Seleccionar --</option>
+        {% for u in usuarios_taller %}
+            <option value="{{ u.username }}"
+{% if proceso.responsable_taller == u.username %}selected{% endif %}>
+                {% if u.first_name %}{{ u.first_name }} {{ u.last_name }}{% else %}{{ u.username|upper }}{% endif %}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+        </div>
+    </div>
+
+    <hr class="my-4">
+
+    <div id="formDiseno" class="p-4 rounded-4 bg-white border-start border-5 border-primary mb-4 shadow-sm">
+        <h6 class="fw-bold text-primary mb-3 tech-title small uppercase">
+            <i class="bi bi-pencil-square me-2"></i>Instrucciones de Diseño
+        </h6>
+        <div class="row g-3">
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="form-check">
+                    <input type="checkbox"
+name="reunion"
+class="form-check-input"
+id="admin_reunion"
+{% if proceso.reunion %}checked{% endif %}>
+                    <label class="ms-2 small fw-bold" for="admin_reunion">Reunión agendada</label>
+                </div>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="form-check">
+                    <input type="checkbox"
+name="pauta"
+class="form-check-input"
+id="admin_pauta"
+{% if proceso.pauta %}checked{% endif %}>
+                    <label class="ms-2 small fw-bold" for="admin_pauta">Pauta lista</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="formTerreno" class="p-4 rounded-4 bg-white border-start border-5 border-danger mb-4 shadow-sm">
+    <h6 class="fw-bold text-danger mb-3 tech-title small uppercase">
+        <i class="bi bi-camera-fill me-2"></i>Levantamiento de Terreno
+    </h6>
+    
+    <div class="row g-4">
+        <div class="col-md-5 border-end">
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-muted text-uppercase">Registro Fotográfico / Documentos</label>
+                <input type="file" name="fotos_terreno" class="form-control form-control-sm border-2 shadow-sm" 
+                    multiple accept="image/png, image/jpeg, image/jpg, application/pdf">
+            </div>
+            <div class="row g-2 mt-2">
+    {% for foto in proceso.fotos_terreno.all %}
+        <div class="col-3 col-md-2 position-relative">
+            <div class="ratio ratio-1x1 border rounded-3 overflow-hidden shadow-sm">
+                {% if foto.imagen.url|lower|slice:"-3:" == "pdf" %}
+                    <div class="d-flex align-items-center justify-content-center bg-light text-danger">
+                        <i class="bi bi-file-pdf fs-2"></i>
+                    </div>
+                {% else %}
+                    <img src="{{ foto.imagen.url }}" class="img-fluid object-fit-cover" alt="Foto terreno">
+                {% endif %}
+            </div>
+            <a href="{{ foto.imagen.url }}" target="_blank" class="stretched-link"></a>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <p class="text-muted small italic">No hay archivos cargados anteriormente.</p>
+        </div>
+    {% endfor %}
+</div>
+            <div class="bg-light p-3 rounded-3 border">
+                <label class="form-label small fw-bold text-danger text-uppercase mb-2">Agregar Medición</label>
+                <div class="mb-2">
+                    <input type="text" id="med_desc" class="form-control form-control-sm" placeholder="Titulo">
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-4">
+                        <input type="number" id="med_largo" class="form-control form-control-sm" placeholder="Largo">
+                    </div>
+                    <div class="col-4">
+                        <input type="number" id="med_ancho" class="form-control form-control-sm" placeholder="Ancho">
+                    </div>
+                    <div class="col-4">
+                        <input type="number" id="med_cant" class="form-control form-control-sm"  placeholder="Cant">
+                    </div>
+                </div>
+                <button type="button" onclick="agregarMedicionAlListado()" class="btn btn-danger btn-sm w-100 fw-bold">
+                    <i class="bi bi-plus-lg me-1"></i> GUARDAR MEDICIÓN
+                </button>
+            </div>
+            
+            <div class="mt-3">
+    <label class="form-label small fw-bold text-muted">OBSERVACIONES</label>
+    <textarea name="obs_terreno" class="form-control border-2" rows="2" placeholder="Notas adicionales...">{{ proceso.observaciones_terreno|default:'' }}</textarea>
+</div>
+        </div>
+
+        <div class="col-md-7">
+            <label class="form-label small fw-bold text-muted text-uppercase">Mediciones Registradas</label>
+            <div class="table-responsive border rounded-3 bg-white" style="max-height: 250px;">
+                <table class="table table-sm table-hover mb-0" id="tablaMedicionesTerreno">
+                    <thead class="table-danger">
+                        <tr style="font-size: 0.75rem;">
+                            <th class="ps-2">TITULO</th>
+                            <th>MEDIDAS</th>
+                            <th>CANT.</th>
+                            <th class="text-center">X</th>
+                        </tr>
+                    </thead>
+                    <tbody style="font-size: 0.85rem;">
+                        </tbody>
+                </table>
+            </div>
+            <input type="hidden" name="mediciones_json" id="input_mediciones_json" value="{{ proceso.mediciones_json|default:'[]' }}">
+        </div>
+    </div>
+</div>
+</div>
+
+    <div id="formTaller">
+    <div class="row g-4">
+        <div class="col-md-8">
+            <div class="p-4 rounded-4 bg-white border-start border-5 border-warning h-100 shadow-sm">
+                <h6 class="fw-bold text-warning mb-4 tech-title small uppercase">
+                    <i class="bi bi-box-seam me-2"></i>Insumos y Materiales
+                </h6>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox"
+name="acrilico" class="form-check-input" id="admin_acrilico"
+{% if proceso.acrilico %}checked{% endif %}>  
+                            <label class="form-check-label fw-bold small ms-2" for="admin_acrilico">Acrílico</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox"
+name="sintra" class="form-check-input" id="admin_sintra"
+{% if proceso.sintra %}checked{% endif %}>  
+                            <label class="form-check-label fw-bold small ms-2" for="admin_sintra">Sintra</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox"
+name="ojetillo" class="form-check-input" id="admin_ojetillo"
+{% if proceso.ojetillo %}checked{% endif %}>  
+                            <label class="form-check-label fw-bold small ms-2" for="admin_ojetillo">Ojetillo</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox"
+name="ad_prom" class="form-check-input" id="admin_ad_prom"
+{% if proceso.ad_prom %}checked{% endif %}>  
+                            <label class="form-check-label fw-bold small ms-2" for="admin_ad_prom">Ad Prom</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox"
+name="ad_vehicular" class="form-check-input" id="admin_ad_vehicular"
+{% if proceso.ad_vehicular %}checked{% endif %}>  
+                            <label class="form-check-label fw-bold small ms-2" for="admin_ad_vehicular">Ad Vehicular</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox"
+name="empavonado" class="form-check-input" id="admin_empavonado"
+{% if proceso.empavonado %}checked{% endif %}>  
+                            <label class="form-check-label fw-bold small ms-2" for="admin_empavonado">Empavonado</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox"
+name="microperf" class="form-check-input" id="admin_microperf"
+{% if proceso.microperf %}checked{% endif %}>  
+                            <label class="form-check-label fw-bold small ms-2" for="admin_microperf">Microperf</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox"
+name="sellado" class="form-check-input" id="admin_sellado"
+{% if proceso.sellado %}checked{% endif %}>  
+                            <label class="form-check-label fw-bold small ms-2" for="admin_sellado">Sellado</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox"
+name="tela_pvc" class="form-check-input" id="admin_tela_pvc"
+{% if proceso.tela_pvc%}checked{% endif %}>  
+                            <label class="form-check-label fw-bold small ms-2" for="admin_tela_pvc">Tela PVC</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <label class="form-label small fw-bold text-muted uppercase">Otros materiales</label>
+                    <input type="text"
+    name="otros_materiales"
+    class="form-control border-2 shadow-sm"
+    placeholder="Ej: Pintura, perfiles especiales, etc."
+    value="{{ proceso.otros_materiales }}">
+                </div>
+                
+                <div class="mt-4 pt-3 border-top">
+                    <label class="small fw-bold text-secondary mb-2">PLANTILLAS DE CARGA:</label>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="mostrarPlantilla('vehiculo')">
+                            <i class="bi bi-truck"></i> VEHÍCULO 
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mostrarPlantilla('terreno')">
+                            <i class="bi bi-geo-alt"></i> TERRENO 
+                        </button>
+                    </div>
+                    <div id="contenedorPlantillas" class="mt-3 p-3 border rounded-3 bg-white shadow-sm" style="display: none;">
+    <div id="botonesPiezas" class="d-flex flex-wrap gap-2 mb-3"></div>
+
+    <div id="zonaFormularioTecnico" style="display: none;" class="mt-3 animate__animated animate__fadeIn">
+    <div class="p-4 border rounded-3 shadow-sm bg-white" style="font-family: sans-serif; font-size: 0.85rem;">
+        
+        <div class="d-flex justify-content-between align-items-center border-bottom border-2 mb-3 pb-2">
+            <div>
+                <h6 class="fw-bold mb-0 text-uppercase" style="letter-spacing: 1px;">Edición Ficha Técnica - USBTECH</h6>
+                <small class="text-muted text-uppercase" style="font-size: 0.65rem;">Actualización de Instalación y Fabricación</small>
+            </div>
+            <i class="bi bi-pencil-square text-primary fs-4"></i>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="p-2 border rounded bg-light h-100">
+                    <p class="fw-bold mb-2 border-bottom pb-1 text-primary small uppercase"><i class="bi bi-pin-map"></i> Ubicación y Acceso</p>
+                    <div class="mb-2">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="terreno_ubicacion" value="interior" {% if levantamiento.ubicacion == 'interior' %}checked{% endif %}> Interior
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="terreno_ubicacion" value="exterior" {% if levantamiento.ubicacion == 'exterior' %}checked{% endif %}> Exterior
+                        </div>
+                    </div>
+                    <div class="mb-2 small">
+                        <label>Altura de instalación (m):</label>
+                        <input type="number" step="0.1" name="terreno_altura_m" class="form-control form-control-sm" value="{{ levantamiento.altura_instalacion|stringformat:'.1f' }}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="d-block small fw-bold">Altura de Acceso:</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <div class="form-check small"><input class="form-check-input" type="checkbox" name="acc_escalera" {% if levantamiento.acceso_escalera %}checked{% endif %}> Escalera</div>
+                            <div class="form-check small"><input class="form-check-input" type="checkbox" name="acc_andamio" {% if levantamiento.acceso_andamio %}checked{% endif %}> Andamio</div>
+                            <div class="form-check small"><input class="form-check-input" type="checkbox" name="acc_grua" {% if levantamiento.acceso_grua %}checked{% endif %}> Grúa</div>
+                        </div>
+                    </div>
+                    <input type="text" name="acc_restricciones" class="form-control form-control-sm" placeholder="Restricciones..." value="{{ levantamiento.restricciones_acceso|default:'' }}">
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-2 border rounded bg-white h-100 border-primary">
+                    <p class="fw-bold mb-2 border-bottom pb-1 text-primary small uppercase"><i class="bi bi-arrows-fullscreen"></i> Medidas Generales (cm)</p>
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <label class="x-small fw-bold">Ancho:</label>
+                            <input type="number" step="0.1" name="medida_ancho" 
+       class="form-control form-control-sm" 
+       value="{{ levantamiento.ancho|stringformat:'.1f' }}">
+                        </div>
+                        <div class="col-4">
+                            <label class="x-small fw-bold">Alto:</label>
+                            <input type="number" step="0.1" name="medida_alto" class="form-control form-control-sm" value="{{ levantamiento.alto|stringformat:'.1f' }}">
+                        </div>
+                        <div class="col-4">
+                            <label class="x-small fw-bold">Profundidad:</label>
+                            <input type="number" step="0.1" name="medida_profundidad" class="form-control form-control-sm" value="{{ levantamiento.profundidad_letrero|stringformat:'.1f' }}">
+                        </div>
+                        <div class="col-12 mt-2">
+                            <small class="text-muted italic">* Nota: Si aplica profundidad para letreros luminosos o cajas.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-2 border rounded bg-light h-100">
+                    <p class="fw-bold mb-2 border-bottom pb-1 text-secondary small uppercase"><i class="bi bi-layers"></i> Superficie Soporte</p>
+                    <div class="row g-1 mb-2">
+                        <div class="col-6 form-check small"><input class="form-check-input" type="checkbox" name="sup_muro" {% if levantamiento.soporte_muro %}checked{% endif %}> Muro</div>
+                        <div class="col-6 form-check small"><input class="form-check-input" type="checkbox" name="sup_metal" {% if levantamiento.soporte_metal %}checked{% endif %}> Metal</div>
+                        <div class="col-6 form-check small"><input class="form-check-input" type="checkbox" name="sup_panel" {% if levantamiento.soporte_panel %}checked{% endif %}> Panel Comp.</div>
+                        <div class="col-6 form-check small"><input class="form-check-input" type="checkbox" name="sup_vidrio" {% if levantamiento.soporte_vidrio %}checked{% endif %}> Vidrio</div>
+                        <div class="col-12"><input type="text" name="sup_otro" class="form-control form-control-sm" value="{{ levantamiento.soporte_otro|default:'' }}"></div>
+                    </div>
+                    <div class="p-2 border rounded bg-warning-subtle border-warning mt-2">
+                        <label class="fw-bold small text-dark d-block">Eléctrico:</label>
+                        <div class="form-check small"><input class="form-check-input" type="checkbox" name="elec_punto" {% if levantamiento.punto_cercano %}checked{% endif %}> Punto cercano SÍ</div>
+                        <div class="form-check small"><input class="form-check-input" type="checkbox" name="elec_tablero" {% if levantamiento.tablero_accesible %}checked{% endif %}> Tablero accesible SÍ</div>
+                        <input type="text" name="elec_voltaje" class="form-control form-control-sm mt-1" value="{{ levantamiento.voltaje|default:'' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-2 border rounded border-primary-subtle bg-white h-100">
+                    <p class="fw-bold mb-2 border-bottom pb-1 text-primary small uppercase"><i class="bi bi-box-seam"></i> Fabricación</p>
+                    <div class="mb-2">
+                        <label class="fw-bold x-small text-secondary text-uppercase">Material:</label>
+                        <div class="row g-0 small">
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="mat_pvc" {% if levantamiento.mat_pvc %}checked{% endif %}> PVC Normal</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="mat_acrilico" {% if levantamiento.mat_acrilico %}checked{% endif %}> Acrílico</div>
+                            </div>
+                    </div>
+                    <div>
+                        <label class="fw-bold x-small text-secondary text-uppercase">Terminación:</label>
+                        <div class="row g-0 small">
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="term_ojetillos" {% if levantamiento.term_ojetillos %}checked{% endif %}> Ojetillos</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="term_bastidor" {% if levantamiento.term_bastidor %}checked{% endif %}> Bastidor</div>
+                            </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="p-2 border rounded border-danger bg-danger-subtle shadow-sm">
+                    <p class="fw-bold mb-2 border-bottom border-danger pb-1 text-danger small uppercase"><i class="bi bi-exclamation-triangle"></i> Riesgos y Seguridad</p>
+                    <div class="row g-2 small">
+    <div class="col-md-3 form-check">
+        <input class="form-check-input" type="checkbox" name="r_altura" {% if levantamiento.riesgo_altura %}checked{% endif %}> Trabajo Altura
+    </div>
+    
+    <div class="col-md-3 form-check">
+        <input class="form-check-input" type="checkbox" name="r_transito" {% if levantamiento.riesgo_transito %}checked{% endif %}> Tránsito Vehicular
+    </div>
+    
+    <div class="col-md-3 form-check">
+        <input class="form-check-input" type="checkbox" name="r_permiso" {% if levantamiento.riesgo_permiso %}checked{% endif %}> Permiso municipal
+    </div>
+    
+    <div class="col-md-3 form-check">
+        <input class="form-check-input" type="checkbox" name="r_energia" {% if levantamiento.riesgo_energia %}checked{% endif %}> Corte energia
+    </div>
+
+    <div class="col-12">
+        <div class="input-group input-group-sm">
+            <span class="input-group-text bg-white border-danger text-danger small">Tiempo Est. Instalación:</span>
+            <input type="text" name="r_tiempo_estimado" class="form-control border-danger" 
+                   value="{{ levantamiento.tiempo_estimado_instalacion|default:'' }}">
+        </div>
+    </div>
+</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+                </div>
+
+                <div class="table-responsive mt-4">
+                    <table class="table table-hover border shadow-sm rounded bg-white">
+                        <thead class="bg-light text-secondary small uppercase">
+                            <tr>
+                                <th style="width: 40%;">Descripción Pieza</th>
+                                <th class="text-center">Medidas (Ancho x Alto)</th>
+                                <th class="text-center">Cant.</th>
+                                <th style="width: 50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyTaller"></tbody>
+                    </table>
+                </div>
+            </div> 
+        </div> <div class="col-md-4">
+            
+   <div class="p-4 rounded-4 bg-white border-start border-5 border-success mb-4 shadow-sm">
+    <h6 class="fw-bold text-success mb-3 tech-title small uppercase">
+        <i class="bi bi-card-checklist me-2"></i>Vehículos Registrados
+    </h6>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+            <thead class="bg-light small">
+                <tr>
+                    <th>#</th>
+                    <th>Vehículo</th>
+                    <th class="text-end">Acción</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyRegistroVehiculos">
+                <tr>
+                    <td colspan="3" class="text-center text-muted small py-3">Sin vehículos</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+    <div class="p-4 rounded-4 bg-white border-start border-5 border-info h-auto shadow-sm">
+        <h6 class="fw-bold text-info mb-4 tech-title small uppercase">
+            <i class="bi bi-gear-wide-connected me-2"></i>Producción
+        </h6>
+        <div class="mb-3">
+            <div class="form-check p-2 rounded hover-check">
+                <input type="checkbox"
+name="impresion" class="form-check-input" id="admin_impresion"
+{% if proceso.impresion %}checked{% endif %}>
+                <label class="form-check-label fw-bold ms-2" for="admin_impresion">Impresión</label>
+            </div>
+        </div>
+        <div class="mb-3">
+            <div class="form-check p-2 rounded hover-check">
+                <input type="checkbox"
+name="corte" class="form-check-input" id="admin_corte"
+{% if proceso.corte %}checked{% endif %}>  
+                <label class="form-check-label fw-bold ms-2" for="admin_corte">Corte</label>
+            </div>
+        </div>
+    </div>
+</div>
+        </div> <div class="col-12">
+            <div class="p-4 rounded-4 bg-white border border-info mb-4 shadow-sm">
+    <h6 class="fw-bold text-info mb-3 tech-title small uppercase">
+        <i class="bi bi-stars me-2"></i>Terminaciones
+    </h6>
+    <textarea name="terminaciones_especificas" class="form-control border-2" rows="2">{{ proceso.terminaciones|default:'' }}</textarea>
+</div>
+
+            <div class="p-4 rounded-4 bg-white border shadow-sm">
+                <h6 class="fw-bold text-secondary mb-3 tech-title small uppercase">
+                    <i class="bi bi-chat-dots me-2"></i>Observaciones Generales
+                </h6>
+                <textarea name="instrucciones_admin"
+class="form-control border-2"
+rows="3"
+placeholder="Especifique detalles técnicos">{{ proceso.instrucciones_admin }}</textarea>
+            </div>
+        </div>
+    </div> </div> <input type="hidden" name="mediciones_taller_json" id="input_taller_json" value="{{ proceso.mediciones_taller_json|default:'[]' }}">
+
+            <div class="text-end mt-4">
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary px-5 fw-bold">
+                    <i class="bi bi-save me-2"></i>GUARDAR CAMBIOS
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let registroVehiculos = JSON.parse(document.getElementById('input_taller_json').value || '[]');
+let listaMediciones = JSON.parse(document.getElementById('input_mediciones_json').value || '[]');
+let listaTaller = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    renderizarTabla();       
+    actualizarTablaRegistro();
+    const fechaEntregaInput = document.getElementById('fecha_entrega');
+    if (fechaEntregaInput) {
+        fechaEntregaInput.setAttribute('min', new Date().toISOString().split('T')[0]);
+    }
+
+    const swDiseno = document.getElementById('switchDiseno');
+    const swTaller = document.getElementById('switchTaller');
+
+    function toggleForms() {
+        const formDiseno = document.getElementById('formDiseno');
+        const formTaller = document.getElementById('formTaller');
+        const formTerreno = document.getElementById('formTerreno');
+        const divRespDiseno = document.getElementById('div_responsable_diseno');
+        const divRespTaller = document.getElementById('div_responsable_taller');
+
+        if (swDiseno && formDiseno && formTerreno && divRespDiseno) {
+            const isVisible = swDiseno.checked;
+            formDiseno.style.display = isVisible ? 'block' : 'none';
+            formTerreno.style.display = isVisible ? 'block' : 'none';
+            divRespDiseno.style.display = isVisible ? 'block' : 'none';
+            document.getElementById('select_diseno').disabled = !isVisible;
+        }
+
+        if (swTaller && formTaller && divRespTaller) {
+            const isVisible = swTaller.checked;
+            formTaller.style.display = isVisible ? 'block' : 'none';
+            divRespTaller.style.display = isVisible ? 'block' : 'none';
+            document.getElementById('select_taller').disabled = !isVisible;
+        }
+    }
+
+    if (swDiseno) swDiseno.addEventListener('change', toggleForms);
+    if (swTaller) swTaller.addEventListener('change', toggleForms);
+    toggleForms();
+});
+
+
+function actualizarResumenLateral() {
+    const contenedor = document.getElementById('resumenVerificacion');
+    if (!contenedor) return;
+
+    // Extraemos los tipos de vehículos únicos de la listaTaller
+    // Por ejemplo, si en la descripción dice "CAMIÓN: PUERTA", sacamos "CAMIÓN"
+    const tiposEncontrados = [...new Set(listaTaller.map(item => {
+        return item.descripcion.includes(':') ? item.descripcion.split(':')[0] : 'MANUAL';
+    }))];
+
+    if (tiposEncontrados.length === 0) {
+        contenedor.innerHTML = '<p class="text-muted text-center py-2">No hay vehículos cargados</p>';
+        return;
+    }
+
+    // Dibujamos el resumen
+    let html = '<ul class="list-group list-group-flush">';
+    tiposEncontrados.forEach(tipo => {
+        html += `
+            <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                <span class="fw-bold text-dark"><i class="bi bi-truck text-success me-2"></i>${tipo}</span>
+                <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">Listo</span>
+            </li>`;
+    });
+    html += '</ul>';
+    
+    contenedor.innerHTML = html;
+}
+
+const piezasVehiculo = [
+    { cat: 'CAMIONETA', items: ['Puerta Chofer Del.', 'Puerta Chofer Tras.', 'Puerta Copiloto Del.', 'Puerta Copiloto Tras.', 'Lateral Zona Carga', 'Portalón Trasero', 'Lateral Completo', 'Atrás (Medida Total)'] },
+    { cat: 'FURGÓN', items: ['Puerta Chofer', 'Puerta Copiloto', 'Puerta Corredera', 'Ventanal Corredera', 'Lado Ventana Carga', 'Lateral Completo', 'Atrás Completo', 'Puertas Divididas', 'Lado Patente', 'Lado Logo'] },
+    { cat: 'CAMIÓN', items: ['Puerta Chofer', 'Lateral Zona Carga', 'Portalón'] }
+];
+
+const piezasTerreno = ['Frontal', 'Lateral Izquierdo', 'Lateral Derecho', 'Letrero Superior', 'Ventanales', 'Muro Principal'];
+
+function cargarItemsTaller(categoria) {
+    // 1. LIMPIAR LA LISTA ACTUAL (Este es el paso que faltaba)
+    listaTaller = []; 
+
+    const piezas = {
+    'CAMIONETA': [
+        'Puerta Chofer Delantera', 
+        'Puerta Chofer Trasera', 
+        'Puerta Copiloto Delantera', 
+        'Puerta Copiloto Trasera', 
+        'Lateral Zona de Carga', 
+        'Portalón (Parte Trasera)',
+        'Lateral Completo (x2)', 
+        'Atrás (Completo)'
+    ],
+    'FURGÓN': [
+        'Puerta Chofer', 
+        'Puerta Corredera Copiloto', 
+        'Lateral Completo (Lado Corredera)', 
+        'Ventanal Puerta Corrediza',
+        'Puerta Copiloto', 
+        'Lado Ventana Zona de Carga', 
+        'Lateral Completo', 
+        'Atrás Completo', 
+        'Ventanal Completo', 
+        'Puertas Divididas', 
+        'Lado Patente', 
+        'Lado Logo Vehículo'
+    ],
+    'CAMIÓN': [
+        'Puerta Chofer', 
+        'Lateral Zona de Carga (x2)', 
+        'Portalón'
+    ]
+};
+
+    const listaSeleccionada = piezas[categoria] || [];
+    
+    listaSeleccionada.forEach(p => {
+        listaTaller.push({
+            id: Date.now() + Math.random(),
+            descripcion: `${categoria}: ${p}`,
+            ancho: "", alto: "", cantidad: 1
+        });
+    });
+    
+    
+    renderizarTablaTaller();
+}
+
+function actualizarTablaRegistro() {
+    const tbody = document.getElementById('tbodyRegistroVehiculos');
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    if (registroVehiculos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted small py-3">Sin registros</td></tr>';
+        return;
+    }
+
+    registroVehiculos.forEach((reg, index) => {
+        const cant = reg.cantidad || 1; 
+
+        // Separamos la categoría del nombre
+        let categoria = "GENERAL";
+        let pieza = reg.nombre;
+
+        if (reg.nombre.includes(':')) {
+            const partes = reg.nombre.split(':');
+            categoria = partes[0].trim(); // Ejemplo: FURGÓN
+            pieza = partes[1].trim();     // Ejemplo: Puerta Chofer
+        }
+
+        tbody.innerHTML += `
+            <tr class="bg-light">
+                <td class="small text-muted">${index + 1}</td>
+                <td class="small">
+                    <div class="text-muted fw-bold" style="font-size:0.6rem; opacity: 0.8;">${categoria}</div>
+                    <div class="fw-bold text-uppercase text-dark" style="font-size:0.75rem; margin-top: -2px;">
+                        ${pieza}
+                    </div>
+                    <div class="text-primary fw-bold">${reg.medida} <span class="text-dark">(x${cant})</span></div>
+                </td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-sm text-danger p-0" onclick="eliminarDelRegistro(${index})">
+                        <i class="bi bi-x-circle"></i>
+                    </button>
+                </td>
+            </tr>`;
+    });
+
+    const inputTaller = document.getElementById('input_taller_json');
+    if (inputTaller) {
+        inputTaller.value = JSON.stringify(registroVehiculos);
+    }
+}
+
+function eliminarDelRegistro(index, nombreVehiculo) {
+    // 1. Quitamos del registro lateral
+    registroVehiculos.splice(index, 1);
+    
+    // 2. OPCIONAL: Si quieres que al borrar del registro también se borren las medidas:
+    listaTaller = listaTaller.filter(item => !item.descripcion.startsWith(nombreVehiculo));
+    
+    renderizarTablaTaller();
+    actualizarTablaRegistro();
+}
+
+function mostrarPlantilla(tipo) {
+    const contenedor = document.getElementById('contenedorPlantillas');
+    const divBotones = document.getElementById('botonesPiezas');
+    const zonaTecnica = document.getElementById('zonaFormularioTecnico'); // El nuevo div
+    
+    divBotones.innerHTML = ''; 
+    contenedor.style.display = 'block';
+
+    if (tipo === 'vehiculo') {
+        // Ocultamos la parte técnica si es vehículo
+        if(zonaTecnica) zonaTecnica.style.display = 'none';
+
+        const categorias = [
+            {n: 'CAMIONETA', v: 'CAMIONETA', c: 'btn-outline-primary'},
+            {n: 'FURGÓN', v: 'FURGÓN', c: 'btn-outline-info'},
+            {n: 'CAMIÓN', v: 'CAMIÓN', c: 'btn-outline-dark'}
+        ];
+
+        categorias.forEach(cat => {
+            let btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `btn btn-sm ${cat.c} me-2 fw-bold mb-2 shadow-sm`;
+            btn.innerHTML = `<i class="bi bi-truck"></i> CARGAR ${cat.n}`;
+            btn.onclick = () => cargarItemsTaller(cat.v); 
+            divBotones.appendChild(btn);
+        });
+    } else {
+        // --- MODO TERRENO ---
+        // 1. Mostramos el formulario técnico (lo que querías que aparezca)
+        if(zonaTecnica) {
+            zonaTecnica.style.display = 'block';
+            // Animación simple de entrada si usas Bootstrap/CSS
+            zonaTecnica.classList.add('animate__animated', 'animate__fadeIn'); 
+        }
+
+        // 2. Cargamos los botones de piezas (Frontal, Lateral, etc.)
+        piezasTerreno.forEach(pieza => {
+            let btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-light border m-1 shadow-sm fw-bold text-secondary';
+            btn.style.fontSize = '0.75rem';
+            btn.innerText = pieza;
+            btn.onclick = () => agregarMedicionTaller(`TERRENO: ${pieza}`);
+            divBotones.appendChild(btn);
+        });
+    }
+}
+
+
+
+function agregarMedicionTaller(nombre) {
+    listaTaller.push({
+        id: Date.now() + Math.random(),
+        descripcion: nombre,
+        ancho: "", alto: "", cantidad: 1
+    });
+    renderizarTablaTaller();
+}
+
+// 4. RENDERIZADO DE TABLAS (Separadas)
+function renderizarTabla() { // DISEÑO / TERRENO
+    const tbody = document.querySelector('#tablaMedicionesTerreno tbody');
+    if(!tbody) return;
+    tbody.innerHTML = "";
+
+    listaMediciones.forEach((m, index) => {
+        tbody.innerHTML += `
+        <tr class="align-middle">
+            <td class="small fw-bold text-start ps-2">${m.descripcion}</td>
+            <td>
+                <div class="d-flex gap-1 justify-content-center align-items-center">
+                    <input type="text" class="form-control form-control-sm text-center" value="${m.ancho}" 
+                           oninput="listaMediciones[${index}].ancho=this.value; sincronizarInputs()" style="width:60px;">
+                    <span class="small">x</span>
+                    <input type="text" class="form-control form-control-sm text-center" value="${m.largo}" 
+                           oninput="listaMediciones[${index}].largo=this.value; sincronizarInputs()" style="width:60px;">
+                </div>
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm text-center mx-auto" value="${m.cantidad}" 
+                       oninput="listaMediciones[${index}].cantidad=this.value; sincronizarInputs()" style="width:50px;">
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm text-danger" onclick="borrarMedicion(${m.id}, 'diseno')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+    });
+    sincronizarInputs();
+}
+
+function confirmarPiezaTaller(index) {
+    const pieza = listaTaller[index];
+
+    if (!pieza.ancho || !pieza.alto) {
+        Swal.fire({ icon: 'warning', title: 'Campos vacíos', text: 'Ingresa las medidas antes de guardar.' });
+        return;
+    }
+
+    // 1. Mandamos la información al registro de la derecha
+    registroVehiculos.push({
+        nombre: pieza.descripcion,
+        medida: `${pieza.ancho} x ${pieza.alto}`,
+        cantidad: pieza.cantidad
+    });
+
+    // 2. ¡LA MAGIA! Limpiamos los campos en la lista de la izquierda pero NO la eliminamos
+    listaTaller[index].ancho = "";
+    listaTaller[index].alto = "";
+    listaTaller[index].cantidad = 1;
+
+    // 3. Refrescamos visualmente
+    renderizarTablaTaller();
+    actualizarTablaRegistro();
+
+    // Feedback visual en el botón o con Toast
+    const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1000 });
+    Toast.fire({ icon: 'success', title: 'Registrado' });
+}
+
+function renderizarTablaTaller() {
+    const tbody = document.getElementById('tbodyTaller'); 
+    if(!tbody) return;
+
+    tbody.innerHTML = "";
+    listaTaller.forEach((m, index) => {
+        tbody.innerHTML += `
+            <tr class="align-middle">
+                <td class="text-start">
+                    <span class="fw-bold small text-uppercase">${m.descripcion}</span>
+                </td>
+                <td>
+                    <div class="d-flex gap-1 justify-content-center align-items-center">
+                        <input type="text" class="form-control form-control-sm text-center" placeholder="An" 
+                               oninput="listaTaller[${index}].ancho=this.value" style="width: 65px;">
+                        <input type="text" class="form-control form-control-sm text-center" placeholder="Al" 
+                               oninput="listaTaller[${index}].alto=this.value" style="width: 65px;">
+                    </div>
+                </td>
+                <td class="text-center">
+                    <div class="d-flex gap-1 justify-content-center">
+                        <button type="button" class="btn btn-sm btn-success" onclick="confirmarPiezaTaller(${index})">
+                            <i class="bi bi-floppy"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="borrarMedicion(${m.id}, 'taller')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+    });
+    sincronizarInputs();
+}
+
+function sincronizarInputs() {
+    // Para DISEÑO (Terreno) se mantiene igual
+    const inputDiseno = document.getElementById('input_mediciones_json');
+    if (inputDiseno) {
+        inputDiseno.value = JSON.stringify(listaMediciones);
+    }
+
+    // PARA TALLER: Aquí estaba el error. 
+    // Debemos enviar 'registroVehiculos' que es donde están las medidas confirmadas.
+    const inputTaller = document.getElementById('input_taller_json');
+    if (inputTaller) {
+        inputTaller.value = JSON.stringify(registroVehiculos);
+    }
+}
+
+function borrarMedicion(id, tipo) {
+    if(tipo === 'taller') {
+        listaTaller = listaTaller.filter(m => m.id !== id);
+        renderizarTablaTaller();
+    } else {
+        listaMediciones = listaMediciones.filter(m => m.id !== id);
+        renderizarTabla();
+    }
+}
+
+function confirmarCierre(procesoId, clienteNombre, opcionesFacturas) {
+    // Validar si el cliente tiene facturas creadas y libres
+    if (Object.keys(opcionesFacturas).length === 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'No hay facturas disponibles',
+            text: `El cliente ${clienteNombre} no tiene facturas pendientes de vincular. Crea una factura antes de cerrar.`,
+            confirmButtonColor: '#d33'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Finalizar Proceso',
+        html: `Selecciona la factura para <b>${clienteNombre}</b>`,
+        icon: 'warning',
+        input: 'select',
+        inputOptions: opcionesFacturas,
+        inputPlaceholder: '-- Seleccionar Factura --',
+        showCancelButton: true,
+        confirmButtonText: 'Vincular y Archivar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#198754',
+        reverseButtons: true,
+        inputValidator: (value) => {
+            return new Promise((resolve) => {
+                if (value) {
+                    resolve();
+                } else {
+                    resolve('¡Es obligatorio seleccionar una factura!');
+                }
+            });
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const facturaId = result.value;
+            
+            // Pantalla de carga profesional
+            Swal.fire({
+                title: 'Cerrando proyecto...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+           
+            window.location.href = `/usuarios/proceso/cerrar/${procesoId}/?factura_id=${facturaId}`;
+        }
+    });
+}
+
+function agregarMedicionAlListado() {
+    // 1. Capturamos los valores de los inputs
+    const desc = document.getElementById('med_desc').value;
+    const largo = document.getElementById('med_largo').value;
+    const ancho = document.getElementById('med_ancho').value;
+    const cant = document.getElementById('med_cant').value;
+
+    // 2. Validación básica: que no estén vacíos
+    if (!desc || !largo || !ancho || !cant) {
+        alert("Por favor, completa todos los campos de la medición (Título, Largo, Ancho y Cantidad).");
+        return;
+    }
+
+    // 3. Creamos el objeto y lo metemos al array global de diseño
+    const nuevaMedida = {
+        id: Date.now(), // ID único para poder borrarla luego
+        descripcion: desc,
+        largo: largo,
+        ancho: ancho,
+        cantidad: cant
+    };
+
+    listaMediciones.push(nuevaMedida);
+
+    // 4. Limpiamos los inputs para la siguiente entrada
+    document.getElementById('med_desc').value = "";
+    document.getElementById('med_largo').value = "";
+    document.getElementById('med_ancho').value = "";
+    document.getElementById('med_cant').value = "1"; // Dejamos 1 por defecto
+
+    // 5. Refrescamos la tabla visual y sincronizamos el input hidden para Django
+    renderizarTabla();
+}
+
+</script>
+{% endblock %}

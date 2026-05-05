@@ -21,7 +21,43 @@
     <!-- TARJETA -->
     <div class="card border-0 shadow-lg p-4"
          style="background: rgba(255, 255, 255, 0.9); border-radius: 20px;">
+        <form method="GET" class="row g-3 mb-4">
 
+<div class="col-md-4">
+<label class="form-label">Usuario</label>
+<input type="text" name="usuario" class="form-control"
+value="{{ usuario }}" placeholder="Buscar usuario">
+</div>
+
+<div class="col-md-4">
+<label class="form-label">Email</label>
+<input type="text" name="email" class="form-control"
+value="{{ email }}" placeholder="Buscar email">
+</div>
+
+<div class="col-md-4">
+<label class="form-label">Rol</label>
+<select name="rol" class="form-select">
+<option value="">Todos</option>
+<option value="administracion" {% if rol == "administracion" %}selected{% endif %}>Administración</option>
+<option value="taller" {% if rol == "taller" %}selected{% endif %}>Taller</option>
+<option value="diseno" {% if rol == "diseno" %}selected{% endif %}>Diseño</option>
+</select>
+</div>
+
+<div class="col-12 d-flex gap-2">
+
+<button type="submit" class="btn btn-dark">
+<i class="bi bi-search"></i> Buscar
+</button>
+
+<a href="{% url 'lista_usuarios' %}" class="btn btn-secondary">
+Limpiar
+</a>
+
+</div>
+
+</form>
         <div class="table-responsive">
     <table class="table table-hover align-middle">
 
@@ -77,21 +113,26 @@
                 </td>
 
                 <td class="text-center">
-                    <div class="btn-group" role="group">
-                        <a href="{% url 'editar_usuario' user.pk %}"
-                           title="Editar"
-                           class="btn btn-outline-secondary btn-sm border-0">
-                            <i class="bi bi-pencil-square"></i>
-                        </a>
+    <div class="btn-group" role="group">
+        <a href="{% url 'editar_usuario' user.pk %}"
+           title="Editar"
+           class="btn btn-outline-secondary btn-sm border-0">
+            <i class="bi bi-pencil-square"></i>
+        </a>
 
-                        <a href="{% url 'eliminar_usuario' user.pk %}"
-                           title="Eliminar"
-                           class="btn btn-outline-danger btn-sm border-0"
-                           onclick="return confirm('¿Estás seguro de eliminar este usuario?')">
-                            <i class="bi bi-trash3-fill"></i>
-                        </a>
-                    </div>
-                </td>
+        <button type="button"
+                title="Eliminar"
+                class="btn btn-outline-danger btn-sm border-0 btn-confirmar-eliminar"
+                data-url="{% url 'eliminar_usuario' user.pk %}"
+                data-username="{{ user.username }}">
+            <i class="bi bi-trash3-fill"></i>
+        </button>
+    </div>
+</td>
+
+<form id="form-eliminar-global" method="POST" style="display: none;">
+    {% csrf_token %}
+</form>
             </tr>
 
             {% empty %}
@@ -105,7 +146,53 @@
 
         </tbody>
     </table>
+    {% if usuarios.paginator.num_pages > 1 %}
+<div class="d-flex justify-content-center mt-4">
+<nav>
+<ul class="pagination pagination-sm">
+
+{% if usuarios.has_previous %}
+<li class="page-item">
+<a class="page-link"
+href="?page={{ usuarios.previous_page_number }}&usuario={{ usuario }}&email={{ email }}&rol={{ rol }}">
+<i class="bi bi-chevron-left"></i>
+</a>
+</li>
+{% endif %}
+
+{% for num in usuarios.paginator.page_range %}
+
+{% if usuarios.number == num %}
+<li class="page-item active">
+<span class="page-link">{{ num }}</span>
+</li>
+
+{% else %}
+<li class="page-item">
+<a class="page-link"
+href="?page={{ num }}&usuario={{ usuario }}&email={{ email }}&rol={{ rol }}">
+{{ num }}
+</a>
+</li>
+{% endif %}
+
+{% endfor %}
+
+{% if usuarios.has_next %}
+<li class="page-item">
+<a class="page-link"
+href="?page={{ usuarios.next_page_number }}&usuario={{ usuario }}&email={{ email }}&rol={{ rol }}">
+<i class="bi bi-chevron-right"></i>
+</a>
+</li>
+{% endif %}
+
+</ul>
+</nav>
 </div>
+{% endif %}
+</div>
+
 </div>
 
 <!-- ESTILOS -->
@@ -127,41 +214,63 @@
 <!-- SweetAlert2 GLOBAL -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-{% if messages %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    // 1. Configuración base del Toast
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+    });
 
-    let errores = "";
-    let exitos = "";
+    // 2. Mostrar mensajes de Django (Si existen)
+    {% if messages %}
+        {% for message in messages %}
+            Toast.fire({
+                icon: "{% if message.tags == 'success' %}success{% elif message.tags == 'error' %}error{% else %}info{% endif %}",
+                title: "{{ message|escapejs }}"
+            });
+        {% endfor %}
+    {% endif %}
 
-    {% for message in messages %}
-        {% if message.tags == "error" %}
-            errores += "• {{ message|escapejs }}<br>";
-        {% elif message.tags == "success" %}
-            exitos += "{{ message|escapejs }}";
-        {% endif %}
-    {% endfor %}
+    // 3. Lógica de Confirmación de Eliminación (SIEMPRE ACTIVA)
+    const botonesEliminar = document.querySelectorAll('.btn-confirmar-eliminar');
+    const formEliminar = document.getElementById('form-eliminar-global');
 
-    if (errores !== "") {
-        Swal.fire({
-            icon: "error",
-            title: "Error",
-            html: errores,
-            confirmButtonText: "Aceptar"
+    botonesEliminar.forEach(boton => {
+        boton.addEventListener('click', function(e) {
+            e.preventDefault(); // Evita cualquier acción por defecto
+            
+            const url = this.getAttribute('data-url');
+            const username = this.getAttribute('data-username');
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: `Vas a eliminar al usuario "${username}". Esta acción es irreversible.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33', 
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="bi bi-trash"></i> Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                background: '#ffffff',
+                borderRadius: '20px'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    formEliminar.action = url;
+                    formEliminar.submit();
+                }
+            });
         });
-    }
-
-    if (exitos !== "") {
-        Swal.fire({
-            icon: "success",
-            title: "Éxito",
-            text: exitos,
-            confirmButtonText: "Aceptar"
-        });
-    }
-
+    });
 });
 </script>
-{% endif %}
+
 
 {% endblock %}

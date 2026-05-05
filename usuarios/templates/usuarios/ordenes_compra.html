@@ -1,0 +1,393 @@
+{% extends 'usuarios/dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="text-white fw-bold mb-0 text-uppercase tracking-wider">Gestión de Órdenes de Compra</h2>
+            <p class="text-white-50">Control de pedidos, abastecimiento y archivos de proveedores</p>
+        </div>
+        <a href="{% url 'crear_orden_compra' %}" class="btn btn-primary btn-lg rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
+        style="width: 60px; height: 60px;">
+            <i class="bi bi-plus-lg fs-3 text-white"></i>
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius: 20px;">
+        <div class="card-body p-4">
+            <form method="GET" class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label class="form-label">N° Orden</label>
+                    <input type="text" name="n_orden" class="form-control" value="{{ n_orden }}" placeholder="Buscar orden">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">RUT Proveedor</label>
+                    <input type="text" name="rut" class="form-control" value="{{ rut }}" placeholder="Buscar RUT">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Fecha ingreso</label>
+                    <input type="date" name="fecha" class="form-control" value="{{ fecha }}">
+                </div>
+
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark">
+                        <i class="bi bi-search"></i> Buscar
+                    </button>
+                    <a href="{% url 'lista_ordenes_compra' %}" class="btn btn-secondary">
+                        Limpiar
+                    </a>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr class="text-muted small text-uppercase">
+                            <th class="ps-3 py-3">N° Orden</th>
+                            <th class="py-3">Fecha Ingreso</th>
+                            <th class="py-3">Proveedor / RUT</th>
+                            <th class="py-3">Cond. pago</th>
+                            <th class="py-3 text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for o in ordenes %}
+                        <tr>
+                            <td class="fw-bold text-primary ps-3">#{{ o.n_orden }}</td>
+                            <td>{{ o.fecha_ingreso|date:"d/m/Y" }}</td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold text-dark">{{ o.proveedor.razon_social }}</span>
+                                    <small class="text-muted">{{ o.proveedor.rut }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill bg-light text-dark border px-3">
+                                    <i class="bi bi-clock-history me-1 text-primary"></i>
+                                    {{ o.proveedor.get_condiciones_pago_display }}
+                                </span>
+                            </td>
+                        
+                            <td class="text-center">
+                                <div class="btn-group">
+                                    <a href="{% url 'generar_pdf_orden_compra' o.id %}" target="_blank" class="btn btn-sm btn-outline-danger shadow-sm" title="Generar PDF">
+                                        <i class="bi bi-file-pdf"></i>
+                                    </a>
+
+                                    {% with detalle=o.detalles.all %}
+<button class="btn btn-sm btn-outline-dark shadow-sm btn-editar" 
+    data-bs-toggle="modal" 
+    data-bs-target="#modalOrden"
+    data-id="{{ o.id }}"
+    data-norden="{{ o.n_orden }}"
+    data-proveedor="{{ o.proveedor.id }}"
+    data-detalles="{% for d in detalle %}{{ d.articulo.id }}|{{ d.articulo.descripcion|addslashes }}|{{ d.cantidad|stringformat:'.2f' }}|{{ d.precio_unitario|stringformat:'.2f' }}{% if not forloop.last %};{% endif %}{% endfor %}">
+    <i class="bi bi-pencil"></i>
+</button>
+{% endwith %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-25"></i>
+                                No hay órdenes de compra registradas. Haz clic en el botón <b>+</b> para agregar una.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if ordenes.paginator.num_pages > 1 %}
+                <div class="d-flex justify-content-center mt-4">
+                    <nav>
+                        <ul class="pagination pagination-sm">
+                            {% if ordenes.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ ordenes.previous_page_number }}&n_orden={{ n_orden }}&rut={{ rut }}&fecha={{ fecha }}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for num in ordenes.paginator.page_range %}
+                                {% if ordenes.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                                {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}&n_orden={{ n_orden }}&rut={{ rut }}&fecha={{ fecha }}">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if ordenes.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ ordenes.next_page_number }}&n_orden={{ n_orden }}&rut={{ rut }}&fecha={{ fecha }}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalOrden" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 20px;">
+            <div class="modal-header bg-dark text-white" style="border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-file-earmark-plus me-2"></i>Nueva Orden de Compra
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="orden_id" id="orden_id">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Número de Orden</label>
+                            <input type="text" name="n_orden" id="id_n_orden" class="form-control bg-light border-0 rounded-pill px-3" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Proveedor</label>
+                            <select name="proveedor" id="id_proveedor" class="form-select bg-light border-0 rounded-pill px-3" required>
+                                <option value="">Seleccione Proveedor</option>
+                                {% for p in proveedores %}
+                                <option value="{{ p.id }}">{{ p.razon_social }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+    <label class="form-label fw-bold small text-uppercase text-muted">Agregar Artículo</label>
+    <div class="row g-2">
+        <div class="col-md-6">
+            <select id="temp_articulo" class="form-select">
+                <option value="">Seleccione Artículo</option>
+                {% for a in articulos %}
+                {# Usamos cut para quitar posibles espacios y asegurar formato decimal simple #}
+                <option value="{{ a.id }}" data-precio="{{ a.precio_unitario|stringformat:".2f" }}">{{ a.descripcion }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <input type="number" id="temp_cantidad" class="form-control" placeholder="Cant" step="any">
+        </div>
+        <div class="col-md-3">
+            <div class="input-group">
+                <input type="number" id="temp_precio" class="form-control" placeholder="Costo" step="any">
+                <button type="button" class="btn btn-primary" onclick="agregarFila()">
+                    +
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="col-12">
+    <table class="table table-sm mt-3">
+        <thead>
+            <tr>
+                <th>Artículo</th>
+                <th>Cant</th>
+                <th>Precio</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="tabla_detalles"></tbody>
+    </table>
+</div>
+                <div class="modal-footer border-0 bg-light" style="border-radius: 0 0 20px 20px;">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow">
+                        <i class="bi bi-cloud-arrow-up me-2"></i>Guardar Orden
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('click', function(e) {
+        // Detectamos si el clic fue en el botón editar o en algo dentro de él (como el icono)
+        const btnEditar = e.target.closest('.btn-editar');
+        // Detectamos si es el botón de "Nueva Orden" (excluyendo el de editar)
+        const btnNuevo = e.target.closest('[data-bs-target="#modalOrden"]:not(.btn-editar)');
+        
+        const inputNOrden = document.getElementById('id_n_orden');
+        const modalTitle = document.querySelector('#modalOrden .modal-title');
+        const form = document.querySelector('#modalOrden form');
+        const ordenIdInput = document.getElementById('orden_id');
+
+        // --- LÓGICA PARA EDITAR ---
+        if (btnEditar) {
+    modalTitle.innerHTML = '<i class="bi bi-pencil-square me-2"></i>Editar Orden de Compra';
+
+    ordenIdInput.value = btnEditar.dataset.id || "";
+    inputNOrden.value = btnEditar.dataset.norden || "";
+
+    document.getElementById('id_proveedor').value = btnEditar.dataset.proveedor || "";
+
+    // limpiar tabla
+    document.getElementById("tabla_detalles").innerHTML = "";
+
+    // cargar detalles
+    const detalles = btnEditar.dataset.detalles;
+
+    if(detalles){
+        detalles.split(";").forEach(d=>{
+            if(!d.trim()) return;
+
+            const parts = d.split("|");
+
+            agregarFila(
+                parts[0],
+                parts[1],
+                parts[2],
+                parts[3]
+            );
+        });
+    }
+
+    inputNOrden.readOnly = true;
+    if (inputNOrden.classList.contains('bg-light')) {
+        inputNOrden.classList.replace('bg-light', 'bg-secondary-subtle');
+    } else {
+        inputNOrden.classList.add('bg-secondary-subtle');
+    }
+}
+
+        // --- LÓGICA PARA NUEVO ---
+        if (btnNuevo) {
+            modalTitle.innerHTML = '<i class="bi bi-file-earmark-plus me-2"></i>Nueva Orden de Compra';
+
+            document.getElementById("tabla_detalles").innerHTML = "";
+            
+            // Limpiar formulario
+            if (form) form.reset();
+            ordenIdInput.value = "";
+
+            // Estilo visual: Desbloquear el campo N° de Orden
+            inputNOrden.readOnly = false;
+            if (inputNOrden.classList.contains('bg-secondary-subtle')) {
+                inputNOrden.classList.replace('bg-secondary-subtle', 'bg-light');
+            } else {
+                inputNOrden.classList.add('bg-light');
+            }
+        }
+    });
+
+function agregarFila(id=null, desc=null, cant=null, prec=null){
+    const art = document.getElementById("temp_articulo");
+    const cantidad = document.getElementById("temp_cantidad");
+    const precio = document.getElementById("temp_precio");
+
+    // 1. Obtener los valores (prioriza los argumentos si existen, sino usa los inputs)
+    const articuloId = id || art.value;
+    const articuloDesc = desc || (art.selectedIndex >= 0 ? art.options[art.selectedIndex].text : "");
+    
+    // 2. Manejo seguro de Precio (evita el error de .toString() en null)
+    let rawPrecio = (prec !== null && prec !== undefined) ? prec.toString() : precio.value;
+    rawPrecio = rawPrecio.trim();
+    
+    if (rawPrecio.includes('.') && rawPrecio.includes(',')) {
+        rawPrecio = rawPrecio.replace(/\./g, '').replace(',', '.');
+    } else if (rawPrecio.includes(',')) {
+        rawPrecio = rawPrecio.replace(',', '.');
+    }
+
+    // 3. Manejo seguro de Cantidad (evita el error de .toString() en null)
+    let rawCant = (cant !== null && cant !== undefined) ? cant.toString() : cantidad.value;
+    const cantVal = parseFloat(rawCant.replace(',', '.'));
+    
+    const precVal = parseFloat(rawPrecio);
+
+    // 4. Validación: Si falta algo, no agregar
+    if(!articuloId || isNaN(cantVal) || isNaN(precVal)) {
+        console.warn("Faltan datos para agregar la fila:", {articuloId, cantVal, precVal});
+        return;
+    }
+
+    // 5. Crear la fila
+    const tr = document.createElement("tr");
+    const precioFormateado = precVal.toLocaleString('es-CL', { 
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2 
+    });
+
+    tr.innerHTML = `
+        <td>${articuloDesc}</td>
+        <td class="text-center">${cantVal}</td>
+        <td class="text-end">$${precioFormateado}</td>
+        <td class="text-center">
+            <button type="button" class="btn btn-sm btn-danger"
+            onclick="this.closest('tr').remove()">x</button>
+        </td>
+
+        <input type="hidden" name="articulo_ids[]" value="${articuloId}">
+        <input type="hidden" name="cantidades[]" value="${cantVal}">
+        <input type="hidden" name="precios[]" value="${precVal.toFixed(2)}">
+    `;
+
+    document.getElementById("tabla_detalles").appendChild(tr);
+
+    // 6. Limpiar campos temporales
+    art.value = "";
+    cantidad.value = "";
+    precio.value = "";
+}
+</script>
+
+
+<script>
+    document.addEventListener('change', function(e) {
+    if (e.target && e.target.id === 'temp_articulo') {
+        const select = e.target;
+        const selectedOption = select.options[select.selectedIndex];
+        
+        const precioSugerido = selectedOption.getAttribute('data-precio');
+        const inputPrecio = document.getElementById('temp_precio');
+
+        console.log("Precio detectado:", precioSugerido); // Mira esto en la consola (F12)
+
+        if (precioSugerido && precioSugerido !== 'None' && precioSugerido !== '') {
+            // Reemplazamos coma por punto por si acaso
+            inputPrecio.value = precioSugerido.replace(',', '.');
+        } else {
+            inputPrecio.value = "";
+        }
+    }
+});
+</script>
+
+<style>
+    .extra-small { font-size: 0.75rem; }
+    .tracking-wider { letter-spacing: 1px; }
+    .table thead th { border: none; }
+    .btn-primary:hover { background-color: #0b5ed7; transform: translateY(-2px); transition: all 0.2s; }
+    /* Estilo para el campo bloqueado */
+    .bg-secondary-subtle { background-color: #e9ecef !important; opacity: 1; }
+</style>
+
+<style>
+    .extra-small { font-size: 0.75rem; }
+    .tracking-wider { letter-spacing: 1px; }
+    .table thead th { border: none; }
+    .btn-primary:hover { background-color: #0b5ed7; transform: translateY(-2px); transition: all 0.2s; }
+</style>
+{% endblock %}

@@ -1,0 +1,369 @@
+{% extends 'usuarios/dashboard.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="text-white fw-bold mb-0">Registro de Compras</h2>
+            <p class="text-white-50">Gestión de facturas de proveedores, IVA y estados de pago</p>
+        </div>
+        <button type="button" class="btn btn-primary btn-lg rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
+                data-bs-toggle="modal" data-bs-target="#modalCompra" 
+                style="width: 60px; height: 60px;">
+            <i class="bi bi-plus-lg fs-3"></i>
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius: 20px;">
+        <div class="card-body p-4">
+            <form method="GET" class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <label class="form-label">N° Documento</label>
+                    <input type="text" name="n_factura" class="form-control" value="{{ n_factura|default:'' }}" placeholder="Número de factura">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Fecha Compra</label>
+                    <input type="date" name="fecha" class="form-control" value="{{ fecha|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">RUT Proveedor</label>
+                    <input type="text" name="rut" class="form-control" value="{{ rut|default:'' }}" placeholder="Buscar RUT">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Total</label>
+                    <input type="text" name="total" class="form-control" value="{{ total|default:'' }}" placeholder="Monto">
+                </div>
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark">
+                        <i class="bi bi-search"></i> Buscar
+                    </button>
+                    <a href="{% url 'lista_compras' %}" class="btn btn-secondary">Limpiar</a>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="bg-light">
+                        <tr class="text-muted small text-uppercase">
+                            <th>N° Orden</th>
+                            <th>Fecha orden</th>
+                            <th>Vencimiento</th>
+                            <th>Proveedor / RUT</th>
+                            <th>formas de pago</th>
+                            <th>cond. pago</th>
+                            <th>Total Compra</th>
+                            <th>Abonado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    {% for c in compras %}
+    <tr>
+        <td class="fw-bold text-primary">#{{ c.n_factura }}</td>
+        <td>{{ c.fecha_registro|date:"d/m/Y" }}</td>
+        <td>
+    <div class="d-flex flex-column">
+        <span class="small fw-bold text-dark">
+            {{ c.fecha_vencimiento_calculada|date:"d/m/Y" }}
+        </span>
+        
+        {% if c.estado_pago == 'pagado' %}
+            <small class="text-success text-uppercase fw-bold" style="font-size: 0.7rem;">
+                <i class="bi bi-check-circle-fill"></i> Pagado
+            </small>
+        {% elif c.estado_vencimiento == 'atrasada' %}
+            <span class="badge bg-danger animate__animated animate__pulse animate__infinite" style="font-size: 0.65rem;">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> ATRASADA
+            </span>
+        {% else %}
+            <small class="text-muted text-uppercase" style="font-size: 0.7rem;">
+                <i class="bi bi-clock"></i> En plazo
+            </small>
+        {% endif %}
+    </div>
+</td>
+        <td>
+            <div class="d-flex flex-column">
+                <span class="fw-bold">{{ c.proveedor.razon_social }}</span>
+                <small class="text-muted">{{ c.proveedor.rut }}</small>
+            </div>
+        </td>
+        <td>
+            <span class="badge rounded-pill bg-light text-dark border px-3">
+                <i class="bi bi-clock-history me-1 text-primary"></i>
+                {{ c.proveedor.get_condiciones_pago_display }}
+            </span>
+        </td>
+        <td>
+            {% if c.estado_pago == 'pagado' %}
+                <span class="badge bg-success-subtle text-success border border-success px-3">PAGADO</span>
+            {% elif c.estado_pago == 'abonado' %}
+                <span class="badge bg-info-subtle text-info border border-info px-3">ABONADO</span>
+            {% else %}
+                <span class="badge bg-danger-subtle text-danger border border-danger px-3">PENDIENTE</span>
+            {% endif %}
+        </td>
+        <td>
+            <span class="fw-bold">${{ c.total_compra|floatformat:2|intcomma }}</span>
+        </td>
+        <td class="text-success fw-bold">${{ c.valor_abonado|floatformat:2|intcomma }}</td>
+        
+        <td class="text-center">
+            <div class="btn-group">
+                {% if c.archivo_compra %}
+                <a href="{{ c.archivo_compra.url }}" target="_blank" class="btn btn-sm btn-outline-danger shadow-sm" title="Ver PDF">
+                    <i class="bi bi-file-pdf"></i>
+                </a>
+                {% endif %}
+                <button class="btn btn-sm btn-outline-dark shadow-sm btn-editar" 
+                        title="Editar"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modalCompra"
+                        data-id="{{ c.id }}"
+                        data-nfactura="{{ c.n_factura }}"
+                        data-fecha="{{ c.fecha_registro|date:'Y-m-d' }}"
+                        data-proveedor="{{ c.proveedor.id }}"
+                        data-total="{{ c.total_compra|stringformat:'f' }}"
+                        data-estado="{{ c.estado_pago }}"
+                        data-abonado="{{ c.valor_abonado|stringformat:'f' }}">
+                    <i class="bi bi-pencil"></i>
+                </button>
+            </div>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="9" class="text-center py-5 text-muted">
+            <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>
+            No hay compras registradas. Haz clic en el botón <b>+</b> para agregar una.
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+                </table>
+                
+                {% if compras.paginator.num_pages > 1 %}
+                <div class="d-flex justify-content-center mt-4">
+                    <nav>
+                        <ul class="pagination pagination-sm">
+                            {% if compras.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ compras.previous_page_number }}&n_factura={{ n_factura }}&fecha={{ fecha }}&rut={{ rut }}&total={{ total }}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% for num in compras.paginator.page_range %}
+                                <li class="page-item {% if compras.number == num %}active{% endif %}">
+                                    <a class="page-link" href="?page={{ num }}&n_factura={{ n_factura }}&fecha={{ fecha }}&rut={{ rut }}&total={{ total }}">{{ num }}</a>
+                                </li>
+                            {% endfor %}
+                            {% if compras.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ compras.next_page_number }}&n_factura={{ n_factura }}&fecha={{ fecha }}&rut={{ rut }}&total={{ total }}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCompra" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0" style="border-radius: 20px;">
+            <div class="modal-header bg-dark text-white" style="border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title fw-bold"><i class="bi bi-bag-plus me-2"></i>Nueva Compra</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'lista_compras' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="compra_id" id="compra_id">
+                <div class="modal-body p-4">
+                    
+                    {% if form.errors %}
+                    <div class="alert alert-danger py-2" style="border-radius: 12px;">
+                        <ul class="mb-0 small">
+                            {% for field in form %}
+                                {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Número de Factura/Documento</label>
+                            {{ form.n_factura }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Fecha de Compra</label>
+                            {{ form.fecha_registro }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Proveedor</label>
+                            {{ form.proveedor }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Cond. pago</label>
+                            {{ form.condicion_pago_display }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Vencimiento</label>
+                            {{ form.vencimiento_display }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Total Compra</label>
+                            {{ form.total_compra }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Estado de Pago</label>
+                            {{ form.estado_pago }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Valor Abonado</label>
+                            {{ form.valor_abonado }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Adjuntar Documento/Respaldo</label>
+                            {{ form.archivo_compra }}
+                            <div id="pdf-feedback"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light" style="border-radius: 0 0 20px 20px;">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow">
+                        <i class="bi bi-cloud-arrow-up me-2"></i>Guardar Compra
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // TOASTS DE SWEETALERT (Sin cambios)
+    {% if messages %}
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3500,
+        timerProgressBar: true
+    });
+    {% for message in messages %}
+        Toast.fire({ 
+            icon: "{% if message.tags == 'error' %}error{% else %}success{% endif %}", 
+            title: "{{ message }}" 
+        });
+    {% endfor %}
+    {% endif %}
+
+    // 1. DICCIONARIO DE PROVEEDORES (Actualizado con objeto)
+    const datosProveedores = {
+        {% for p in proveedores %}
+            "{{ p.id }}": {
+                "valor": "{{ p.condiciones_pago }}",
+                "texto": "{{ p.get_condiciones_pago_display }}"
+            },
+        {% endfor %}
+    };
+
+    // 2. FUNCIÓN PARA ACTUALIZAR CONDICIÓN Y VENCIMIENTO
+    function actualizarTodo() {
+        const selectProveedor = document.getElementById('id_proveedor');
+        const fechaRegistroInput = document.getElementById('id_fecha_registro');
+        const condicionDisplay = document.getElementById('id_condicion_pago_display_compra');
+        const vencimientoDisplay = document.getElementById('id_vencimiento_display_compra');
+
+        if (selectProveedor && condicionDisplay) {
+            const proveedorId = selectProveedor.value;
+            const info = datosProveedores[proveedorId];
+
+            if (info) {
+                // AQUÍ ESTÁ EL CAMBIO: .texto para mostrar "30 días"
+                condicionDisplay.value = info.texto;
+                
+                // Lógica de Vencimiento: .valor para la matemática
+                const fechaBase = fechaRegistroInput.value;
+                const dias = parseInt(info.valor) || 0;
+
+                if (fechaBase) {
+                    const fecha = new Date(fechaBase + 'T12:00:00'); 
+                    fecha.setDate(fecha.getDate() + dias);
+                    
+                    const d = String(fecha.getDate()).padStart(2, '0');
+                    const m = String(fecha.getMonth() + 1).padStart(2, '0');
+                    const y = fecha.getFullYear();
+                    vencimientoDisplay.value = `${d}/${m}/${y}`;
+                } else {
+                    vencimientoDisplay.value = "";
+                }
+            } else {
+                condicionDisplay.value = "---";
+                vencimientoDisplay.value = "";
+            }
+        }
+    }
+
+    // 3. EVENTOS DE CLIC (EDITAR / NUEVO) - Sin cambios
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-editar')) {
+            const btn = e.target.closest('.btn-editar');
+            document.querySelector('#modalCompra .modal-title').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Editar Compra';
+            
+            document.getElementById('compra_id').value = btn.dataset.id;
+            document.getElementById('id_n_factura').value = btn.dataset.nfactura;
+            document.getElementById('id_fecha_registro').value = btn.dataset.fecha;
+            document.getElementById('id_proveedor').value = btn.dataset.proveedor;
+            document.getElementById('id_estado_pago').value = btn.dataset.estado;
+
+            const t = btn.dataset.total.replace(',', '.');
+            const a = btn.dataset.abonado.replace(',', '.');
+            document.getElementById('id_total_compra').value = parseFloat(t) || 0;
+            document.getElementById('id_valor_abonado').value = parseFloat(a) || 0;
+
+            const feedback = document.getElementById('pdf-feedback');
+            if (feedback) {
+                feedback.innerHTML = '<div class="alert alert-info py-1 px-2 mt-2" style="font-size: 0.75rem;"><i class="bi bi-info-circle me-1"></i> Sube un archivo nuevo solo para reemplazar el actual.</div>';
+            }
+            
+            setTimeout(actualizarTodo, 100);
+        }
+
+        if (e.target.closest('[data-bs-target="#modalCompra"]') && !e.target.closest('.btn-editar')) {
+            document.querySelector('#modalCompra .modal-title').innerHTML = '<i class="bi bi-bag-plus me-2"></i>Registrar Nueva Compra';
+            const form = document.querySelector('#modalCompra form');
+            if (form) form.reset();
+            document.getElementById('compra_id').value = "";
+            
+            const feedback = document.getElementById('pdf-feedback');
+            if (feedback) {
+                feedback.innerHTML = '<div class="text-danger mt-2" style="font-size: 0.7rem;">* Se recomienda adjuntar el respaldo de la compra.</div>';
+            }
+            actualizarTodo();
+        }
+    });
+
+    // 4. EVENTOS DE CAMBIO
+    document.addEventListener('change', function(e) {
+        if (e.target && (e.target.id === 'id_proveedor' || e.target.id === 'id_fecha_registro')) {
+            actualizarTodo();
+        }
+    });
+
+    // 5. INICIALIZACIÓN AL ABRIR MODAL
+    const elModal = document.getElementById('modalCompra');
+    if (elModal) {
+        elModal.addEventListener('shown.bs.modal', actualizarTodo);
+    }
+</script>
+{% endblock %}

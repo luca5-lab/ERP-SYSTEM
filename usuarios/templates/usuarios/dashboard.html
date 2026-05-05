@@ -169,8 +169,8 @@
         <a href="{% url 'menu_cotizaciones' %}" class="nav-link">
             <i class="bi bi-file-text"></i> <span>Cotizaciones</span>
         </a>
-        <a href="#" class="nav-link"><i class="bi bi-receipt"></i> <span>Orden de Compra</span></a>
-        <a href="#" class="nav-link"><i class="bi bi-credit-card"></i> <span>Facturas</span></a>
+        <a href="{% url 'lista_ordenes_compra' %}" class="nav-link"><i class="bi bi-receipt"></i> <span>Orden de Compra</span></a>
+        <a href="{% url 'lista_facturas' %}" class="nav-link"><i class="bi bi-credit-card"></i> <span>Facturas</span></a>
 
         <hr class="mx-3 text-secondary">
         
@@ -186,14 +186,16 @@
         <hr class="mx-3 text-secondary">
 
         <a href="{% url 'informes' %}" class="nav-link"><i class="bi bi-bar-chart-line"></i> <span>Informes</span></a>
-        <a href="#" class="nav-link"><i class="bi bi-bag-plus"></i> <span>Compras</span></a>
-        <a href="#" class="nav-link"><i class="bi bi-cart-check"></i> <span>Ventas</span></a>
+        <a href="{% url 'lista_compras' %}" class="nav-link"><i class="bi bi-bag-plus"></i> <span>Compras</span></a>
+        <a href="{% url 'lista_ventas' %}" class="nav-link"><i class="bi bi-cart-check"></i> <span>Ventas</span></a>
 
         <hr class="mx-3 text-secondary">
 
         <a href="{% url 'lista_usuarios' %}" class="nav-link"><i class="bi bi-person-gear"></i> <span>Usuarios</span></a>
         <a href="{% url 'lista_acciones' %}" class="nav-link"><i class="bi bi-person-gear"></i> <span>Historial acciones</span></a>
 
+    
+    
     {% elif tipo_usuario == 'taller' %}
         <a href="{% url 'dashboard_taller' %}" class="nav-link">
             <i class="bi bi-cpu"></i> <span>Producción Taller</span>
@@ -231,8 +233,8 @@
     <div class="d-flex align-items-center justify-content-between">
         <h1 class="display-5 fw-bold text-dark tech-title mb-0">¡HOLA, {{ user.username }}!</h1>
         
-        <button class="btn btn-primary btn-lg shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTarea">
-            <i class="bi bi-list-check me-2"></i>Tareas
+        <button class="btn btn-primary btn-lg shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearProceso">
+            <i class="bi bi-list-check me-2"></i>Asignacion de tareas
         </button>
     </div>
     <p class="lead text-secondary mt-3">Has ingresado exitosamente al centro de control de USBTech SPA.</p>
@@ -253,7 +255,21 @@
                     <tbody>
                         {% for p in procesos %}
                         <tr>
-    <td class="fw-bold text-primary">{{ p.cliente.razon_social }}</td>
+    <td class="fw-bold text-primary">
+        {{ p.cliente.razon_social }}
+
+        <div class="text-dark fw-bold" style="font-size: 0.8rem;">
+            <span class="badge bg-light text-dark border">
+                <i class="bi bi-hash text-primary"></i> OT-{{ p.id|stringformat:"05d" }}
+            </span>
+        </div>
+        
+        {% if p.instrucciones_admin %}
+        <div class="fw-normal text-secondary" style="font-size: 0.75rem; max-width: 250px;">
+            <i class="bi bi-info-circle-fill text-info"></i> {{ p.instrucciones_admin|truncatechars:60 }}
+        </div>
+        {% endif %}
+    </td>
     <td>
         <span class="badge {% if p.estado == 'diseno' %}bg-info text-dark{% elif p.estado == 'taller' %}bg-warning text-dark{% elif p.estado == 'finalizado' %}bg-success{% else %}bg-secondary{% endif %}">
             {{ p.get_estado_display|upper }}
@@ -273,24 +289,62 @@
         </div>
     </td>
     <td class="text-center">
+    <button type="button" class="btn btn-sm btn-outline-primary shadow-sm mb-2" 
+            data-bs-toggle="modal" 
+            data-bs-target="#modalDetalles{{ p.pk }}">
+        <i class="bi bi-eye"></i> Detalles
+    </button>
+    <a href="{% url 'editar_proceso_admin' p.id %}" 
+     class="btn btn-sm btn-primary">
+        Editar
+    </a>
+    <a href="{% url 'generar_pdf_proceso' p.pk %}" class="btn btn-sm btn-outline-danger shadow-sm" target="_blank">
+            <i class="bi bi-file-earmark-pdf"></i> PDF
+        </a>
+
     {% with tipo=request.user.perfil.tipo_usuario %}
         
         {% if p.estado == 'taller' and tipo == 'taller' %}
-            <a href="{% url 'finalizar_taller' p.pk %}" class="btn btn-sm btn-info shadow-sm px-3 text-dark fw-bold">
-                <i class="bi bi-send-check"></i> ENVIAR A ADMIN
-            </a>
+            <form action="{% url 'finalizar_taller' p.pk %}" method="POST" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="mediciones_taller_json" id="input_taller_json">
+                <button type="submit" class="btn btn-sm btn-info shadow-sm px-3 text-dark fw-bold">
+                    <i class="bi bi-send-check"></i> ENVIAR A ADMIN
+                </button>
+            </form>
 
         {% elif p.estado == 'finalizado' %}
-            {% if request.user.is_superuser or tipo == 'administracion' %}
-                <button onclick="confirmarCierre('{{ p.pk }}', '{{ p.cliente.razon_social }}')" 
-                        class="btn btn-sm btn-success shadow-sm px-3 fw-bold">
-                    <i class="bi bi-check-circle-fill"></i> FINALIZAR PROCESO
-                </button>
-            {% else %}
-                <span class="text-success small fw-bold">
-                    <i class="bi bi-clock-history"></i> EN REVISIÓN ADMIN
-                </span>
-            {% endif %}
+    {% if request.user.is_superuser or tipo == 'administracion' %}
+        
+        <script>
+            // Forzamos la búsqueda de TODAS las facturas del cliente
+            var facturas_{{ p.id }} = {
+                {% for f in p.cliente.facturas.all %}
+                    "{{ f.id }}": "Factura N°{{ f.n_factura }} - ${{ f.total_facturado|safe }}",
+                {% empty %}
+                    // Si entra aquí, es que p.cliente.facturas.all está VACÍO
+                {% endfor %}
+            };
+
+            // Esto nos dirá en la Consola (F12) qué está pasando exactamente
+            console.log("Revisando Cliente: {{ p.cliente.razon_social|escapejs }}");
+            console.log("ID Cliente: {{ p.cliente.id }}");
+            console.log("Objeto Facturas:", facturas_{{ p.id }});
+        </script>
+
+        <button type="button" 
+                onclick="confirmarCierre('{{ p.id }}', '{{ p.cliente.razon_social|escapejs }}', facturas_{{ p.id }})" 
+                class="btn btn-sm btn-success shadow-sm fw-bold">
+            <i class="bi bi-check-circle"></i> Finalizar
+        </button>
+
+ 
+
+    {% else %}
+        <span class="text-success small fw-bold">
+            <i class="bi bi-clock-history"></i> EN REVISIÓN ADMIN
+        </span>
+    {% endif %}
 
         {% elif p.estado == 'cerrado' %}
             <span class="badge bg-dark">
@@ -317,58 +371,490 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalTarea" tabindex="-1" aria-labelledby="modalTareaLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; background: rgba(255,255,255,0.98);">
-            <div class="modal-header bg-dark text-white" style="border-radius: 20px 20px 0 0;">
-                <h5 class="modal-title tech-title" id="modalTareaLabel">
-                    <i class="bi bi-cpu me-2"></i>NUEVA ORDEN
+<div class="modal fade" id="modalCrearProceso" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <form method="POST" action="{% url 'crear_proceso_admin' %}" enctype="multipart/form-data" class="modal-content shadow-lg border-0">
+            {% csrf_token %}
+            <input type="hidden" id="proceso_id" name="proceso_id">
+            
+            <div class="modal-header bg-dark text-white border-bottom border-secondary">
+                <h5 class="modal-title tech-title text-primary">
+                    <i class="bi bi-rocket-takeoff me-2"></i>CONFIGURAR NUEVO PROYECTO
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{% url 'crear_proceso_admin' %}" method="POST">
-                {% csrf_token %}
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small tech-title">1. SELECCIONAR CLIENTE</label>
-                        <select name="cliente_id" class="form-select border-primary" required>
-                            <option value="" selected disabled>Elija un cliente...</option>
-                            {% for c in clientes %}
-                                <option value="{{ c.id }}">{{ c.razon_social }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label class="form-label fw-bold text-dark small tech-title">2. DEFINIR RUTA</label>
-                        <div class="card p-3 border-dashed" style="background: #f8f9fa; border: 2px dashed #dee2e6;">
-                            <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" name="pasa_por_diseno" id="swDiseno" checked>
-                                <label class="form-check-label fw-bold text-dark" for="swDiseno">Requiere Diseño</label>
-                            </div>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" name="pasa_por_taller" id="swTaller" checked>
-                                <label class="form-check-label fw-bold text-dark" for="swTaller">Requiere Taller</label>
-                            </div>
-                        </div>
-                    </div>
+            
+            <div class="modal-body p-4" style="background-color: #f8f9fa; color: #333;">
+                
+                <div class="row mb-4">
+    <div class="col-md-6">
+            <label class="form-label fw-bold text-dark small uppercase">CLIENTE / RAZÓN SOCIAL</label>
+            <select name="cliente_id" class="form-select border-2 shadow-sm" required>
+                <option value="" disabled selected>Seleccione un cliente...</option>
+                {% for cliente in clientes %}
+                <option value="{{ cliente.id }}">{{ cliente.razon_social }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label fw-bold text-dark small uppercase">FAMILIA DE SERVICIO</label>
+            <select name="familia" class="form-select border-2 shadow-sm" required>
+                <option value="" disabled selected>Seleccione una familia...</option>
+                {% for valor, etiqueta in familias_servicios %}
+                <option value="{{ valor }}">{{ etiqueta }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-12 mb-3">
+    <label class="form-label small fw-bold text-primary uppercase">
+        <i class="bi bi-calendar-event me-1"></i> Fecha de Entrega
+    </label>
+    <input type="date" name="fecha_entrega" class="form-control border-2 shadow-sm">
+    <div class="form-text">Esta fecha será visible para los diseñadores y el equipo de taller.</div>
+</div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small tech-title">3. INSTRUCCIONES / TERMINACIONES</label>
-                        <textarea name="terminaciones" class="form-control" rows="3" 
-                                placeholder="Ej: Usar acrílico de 3mm, terminación brillante, entrega urgente para el viernes."></textarea>
+        <div class="col-md-3">
+            <label class="form-label fw-bold text-dark small">DISEÑO</label>
+            <div class="form-check form-switch p-2 rounded border bg-white shadow-sm">
+                <input class="form-check-input ms-0 me-2" type="checkbox" name="pasa_por_diseno" id="switchDiseno" >
+                <label class="form-check-label small fw-bold text-primary">ACTIVAR DISEÑO</label>
+            </div>
+            <div id="div_responsable_diseno" class="mt-2 animate__animated animate__fadeIn">
+    <label class="form-label mb-0 small fw-bold text-muted">Responsable Diseño:</label>
+    <select name="responsable_diseno" id="select_diseno" class="form-select form-select-sm border-primary shadow-sm">
+        <option value="">-- Seleccionar --</option>
+        {% for u in usuarios_diseno %}
+            <option value="{{ u.username }}">
+                {% if u.first_name %}{{ u.first_name }} {{ u.last_name }}{% else %}{{ u.username|upper }}{% endif %}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-bold text-dark small">TALLER</label>
+            <div class="form-check form-switch p-2 rounded border bg-white shadow-sm">
+                <input class="form-check-input ms-0 me-2" type="checkbox" name="pasa_por_taller" id="switchTaller" >
+                <label class="form-check-label small fw-bold text-success">ACTIVAR TALLER</label>
+            </div>
+            <div id="div_responsable_taller" class="mt-2 animate__animated animate__fadeIn">
+    <label class="form-label mb-0 small fw-bold text-muted">Responsable Taller:</label>
+    <select name="responsable_taller" id="select_taller" class="form-select form-select-sm border-success shadow-sm">
+        <option value="">-- Seleccionar --</option>
+        {% for u in usuarios_taller %}
+            <option value="{{ u.username }}">
+                {% if u.first_name %}{{ u.first_name }} {{ u.last_name }}{% else %}{{ u.username|upper }}{% endif %}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+        </div>
+    </div>
+
+    <hr class="my-4">
+
+    <div id="formDiseno" class="p-4 rounded-4 bg-white border-start border-5 border-primary mb-4 shadow-sm">
+        <h6 class="fw-bold text-primary mb-3 tech-title small uppercase">
+            <i class="bi bi-pencil-square me-2"></i>Instrucciones de Diseño
+        </h6>
+        <div class="row g-3">
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="form-check">
+                    <input type="checkbox" name="reunion" class="form-check-input" id="admin_reunion">
+                    <label class="ms-2 small fw-bold" for="admin_reunion">Reunión agendada</label>
+                </div>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="form-check">
+                    <input type="checkbox" name="pauta" class="form-check-input" id="admin_pauta">
+                    <label class="ms-2 small fw-bold" for="admin_pauta">Pauta lista</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="formTerreno" class="p-4 rounded-4 bg-white border-start border-5 border-danger mb-4 shadow-sm">
+    <h6 class="fw-bold text-danger mb-3 tech-title small uppercase">
+        <i class="bi bi-camera-fill me-2"></i>Levantamiento de Terreno
+    </h6>
+    
+    <div class="row g-4">
+        <div class="col-md-5 border-end">
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-muted text-uppercase">Registro Fotográfico / Documentos</label>
+                <input type="file" name="fotos_terreno" class="form-control form-control-sm border-2 shadow-sm" 
+                    multiple accept="image/png, image/jpeg, image/jpg, application/pdf">
+            </div>
+            <div class="bg-light p-3 rounded-3 border">
+                <label class="form-label small fw-bold text-danger text-uppercase mb-2">Agregar Medición</label>
+                <div class="mb-2">
+                    <input type="text" id="med_desc" class="form-control form-control-sm" placeholder="Titulo">
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-4">
+                        <input type="number" id="med_largo" class="form-control form-control-sm" placeholder="Largo">
+                    </div>
+                    <div class="col-4">
+                        <input type="number" id="med_ancho" class="form-control form-control-sm" placeholder="Ancho">
+                    </div>
+                    <div class="col-4">
+                        <input type="number" id="med_cant" class="form-control form-control-sm"  placeholder="Cant">
                     </div>
                 </div>
-                <div class="modal-footer border-0 p-4">
-                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow">
-                        Lanzar Proyecto <i class="bi bi-rocket-takeoff ms-2"></i>
-                    </button>
-                </div>
-            </form>
+                <button type="button" onclick="agregarMedicionAlListado()" class="btn btn-danger btn-sm w-100 fw-bold">
+                    <i class="bi bi-plus-lg me-1"></i> GUARDAR MEDICIÓN
+                </button>
+            </div>
+            
+            <div class="mt-3">
+                <label class="form-label small fw-bold text-muted">OBSERVACIONES</label>
+                <textarea name="obs_terreno" class="form-control border-2" rows="2" placeholder="Notas adicionales..."></textarea>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <label class="form-label small fw-bold text-muted text-uppercase">Mediciones Registradas</label>
+            <div class="table-responsive border rounded-3 bg-white" style="max-height: 250px;">
+                <table class="table table-sm table-hover mb-0" id="tablaMedicionesTerreno">
+                    <thead class="table-danger">
+                        <tr style="font-size: 0.75rem;">
+                            <th class="ps-2">TITULO</th>
+                            <th>MEDIDAS</th>
+                            <th>CANT.</th>
+                            <th class="text-center">X</th>
+                        </tr>
+                    </thead>
+                    <tbody style="font-size: 0.85rem;">
+                        </tbody>
+                </table>
+            </div>
+            <input type="hidden" name="mediciones_json" id="input_mediciones_json">
         </div>
     </div>
 </div>
+</div>
+
+    <div id="formTaller">
+    <div class="row g-4">
+        <div class="col-md-8">
+            <div class="p-4 rounded-4 bg-white border-start border-5 border-warning h-100 shadow-sm">
+                <h6 class="fw-bold text-warning mb-4 tech-title small uppercase">
+                    <i class="bi bi-box-seam me-2"></i>Insumos y Materiales
+                </h6>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox" name="acrilico" class="form-check-input" id="admin_acrilico">
+                            <label class="form-check-label fw-bold small ms-2" for="admin_acrilico">Acrílico</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox" name="sintra" class="form-check-input" id="admin_sintra">
+                            <label class="form-check-label fw-bold small ms-2" for="admin_sintra">Sintra</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox" name="ojetillo" class="form-check-input" id="admin_ojetillo">
+                            <label class="form-check-label fw-bold small ms-2" for="admin_ojetillo">Ojetillo</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox" name="ad_prom" class="form-check-input" id="admin_ad_prom">
+                            <label class="form-check-label fw-bold small ms-2" for="admin_ad_prom">Ad Prom</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox" name="ad_vehicular" class="form-check-input" id="admin_ad_vehicular">
+                            <label class="form-check-label fw-bold small ms-2" for="admin_ad_vehicular">Ad Vehicular</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox" name="empavonado" class="form-check-input" id="admin_empavonado">
+                            <label class="form-check-label fw-bold small ms-2" for="admin_empavonado">Empavonado</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox" name="microperf" class="form-check-input" id="admin_microperf">
+                            <label class="form-check-label fw-bold small ms-2" for="admin_microperf">Microperf</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox" name="sellado" class="form-check-input" id="admin_sellado">
+                            <label class="form-check-label fw-bold small ms-2" for="admin_sellado">Sellado</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check p-2 rounded hover-check">
+                            <input type="checkbox" name="tela_pvc" class="form-check-input" id="admin_tela_pvc">
+                            <label class="form-check-label fw-bold small ms-2" for="admin_tela_pvc">Tela PVC</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <label class="form-label small fw-bold text-muted uppercase">Otros materiales</label>
+                    <input type="text" name="otros_materiales" class="form-control border-2 shadow-sm" placeholder="Ej: Pintura, perfiles especiales, etc.">
+                </div>
+                
+                <div class="mt-4 pt-3 border-top">
+                    <label class="small fw-bold text-secondary mb-2">PLANTILLAS DE CARGA:</label>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="mostrarPlantilla('vehiculo')">
+                            <i class="bi bi-truck"></i> VEHÍCULO 
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="mostrarPlantilla('terreno')">
+                            <i class="bi bi-geo-alt"></i> TERRENO 
+                        </button>
+                    </div>
+                    <div id="contenedorPlantillas" class="mt-3 p-3 border rounded-3 bg-white shadow-sm" style="display: none;">
+    <div id="botonesPiezas" class="d-flex flex-wrap gap-2 mb-3"></div>
+
+    <div id="zonaFormularioTecnico" style="display: none;" class="mt-3 animate__animated animate__fadeIn">
+    <div class="p-4 border rounded-3 shadow-sm bg-white" style="font-family: sans-serif; font-size: 0.85rem;">
+        
+        <div class="d-flex justify-content-between align-items-center border-bottom border-2 mb-3 pb-2">
+            <div>
+                <h6 class="fw-bold mb-0 text-uppercase" style="letter-spacing: 1px;">Ficha Técnica de Terreno - USBTECH</h6>
+                <small class="text-muted text-uppercase" style="font-size: 0.65rem;">Detalles de Instalación y Fabricación</small>
+            </div>
+            <i class="bi bi-rulers text-primary fs-4"></i>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="p-2 border rounded bg-light h-100">
+                    <p class="fw-bold mb-2 border-bottom pb-1 text-primary small uppercase"><i class="bi bi-pin-map"></i> Ubicación y Acceso</p>
+                    <div class="mb-2">
+                        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="terreno_ubicacion" value="interior"> Interior</div>
+                        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="terreno_ubicacion" value="exterior"> Exterior</div>
+                    </div>
+                    <div class="mb-2 small">
+                        <label>Altura de instalación (m):</label>
+                        <input type="number" step="any" inputmode="decimal" name="terreno_altura_m" class="form-control form-control-sm">
+                    </div>
+                    <div class="mb-2">
+                        <label class="d-block small fw-bold">Altura de Acceso:</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <div class="form-check small"><input class="form-check-input" type="checkbox" name="acc_escalera"> Escalera</div>
+                            <div class="form-check small"><input class="form-check-input" type="checkbox" name="acc_andamio"> Andamio</div>
+                            <div class="form-check small"><input class="form-check-input" type="checkbox" name="acc_grua"> Grúa</div>
+                        </div>
+                    </div>
+                    <input type="text" name="acc_restricciones" class="form-control form-control-sm" placeholder="Restricciones (horarios, permisos...)">
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-2 border rounded bg-white h-100 border-primary">
+                    <p class="fw-bold mb-2 border-bottom pb-1 text-primary small uppercase"><i class="bi bi-arrows-fullscreen"></i> Medidas Generales (cm)</p>
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <label class="x-small fw-bold">Ancho:</label>
+                            <input type="number" step="any" inputmode="decimal" name="medida_ancho" class="form-control form-control-sm" placeholder="cm">
+                        </div>
+                        <div class="col-4">
+                            <label class="x-small fw-bold">Alto:</label>
+                            <input type="number" step="any" inputmode="decimal" name="medida_alto" class="form-control form-control-sm" placeholder="cm">
+
+                        </div>
+                        <div class="col-4">
+                            <label class="x-small fw-bold">Profundidad:</label>
+                            <input type="number" step="any" inputmode="decimal" name="medida_profundidad" class="form-control form-control-sm" placeholder="cm">
+                        </div>
+                        <div class="col-12 mt-2">
+                            <small class="text-muted italic">* Nota: Si aplica profundidad para letreros luminosos o cajas.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-2 border rounded bg-light h-100">
+                    <p class="fw-bold mb-2 border-bottom pb-1 text-secondary small uppercase"><i class="bi bi-layers"></i> Superficie Soporte</p>
+                    <div class="row g-1 mb-2">
+                        <div class="col-6 form-check small"><input class="form-check-input" type="checkbox" name="sup_muro"> Muro</div>
+                        <div class="col-6 form-check small"><input class="form-check-input" type="checkbox" name="sup_metal"> Metal</div>
+                        <div class="col-6 form-check small"><input class="form-check-input" type="checkbox" name="sup_panel"> Panel Comp.</div>
+                        <div class="col-6 form-check small"><input class="form-check-input" type="checkbox" name="sup_vidrio"> Vidrio</div>
+                        <div class="col-12"><input type="text" name="sup_otro" class="form-control form-control-sm" placeholder="Otro soporte..."></div>
+                    </div>
+                    
+                    <div class="p-2 border rounded bg-warning-subtle border-warning mt-2">
+                        <label class="fw-bold small text-dark d-block">Eléctrico (Si es luminoso):</label>
+                        <div class="form-check small"><input class="form-check-input" type="checkbox" name="elec_punto"> Punto cercano SÍ</div>
+                        <div class="form-check small"><input class="form-check-input" type="checkbox" name="elec_tablero"> Tablero accesible SÍ</div>
+                        <input type="text" name="elec_voltaje" class="form-control form-control-sm mt-1" placeholder="Voltaje (V)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-2 border rounded border-primary-subtle bg-white h-100">
+                    <p class="fw-bold mb-2 border-bottom pb-1 text-primary small uppercase"><i class="bi bi-box-seam"></i> Fabricación</p>
+                    <div class="mb-2">
+                        <label class="fw-bold x-small text-secondary text-uppercase">Material:</label>
+                        <div class="row g-0 small">
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="mat_pvc"> PVC Normal</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="mat_pvc_lum"> PVC Lum.</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="mat_acrilico"> Acrílico</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="mat_adh_nor"> Adh. Normal</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="mat_adh_trans"> Adh. Trans.</div>
+                        </div>
+                    </div>
+                    <div>
+    <label class="fw-bold x-small text-secondary text-uppercase">Terminación:</label>
+    <div class="row g-0 small">
+        <div class="col-6 form-check">
+            <input class="form-check-input" type="checkbox" name="term_ojetillos"> Ojetillos
+        </div>
+        <div class="col-6 form-check">
+            <input class="form-check-input" type="checkbox" name="term_bolsillo"> Bolsillo
+        </div>
+        <div class="col-6 form-check">
+            <input class="form-check-input" type="checkbox" name="term_tubo"> Tubo
+        </div>
+        <div class="col-6 form-check">
+            <input class="form-check-input" type="checkbox" name="term_bastidor"> Bastidor
+        </div>
+        <div class="col-6 form-check">
+            <input class="form-check-input" type="checkbox" name="term_laminado"> Laminado
+        </div>
+        <div class="col-6 form-check">
+            <input class="form-check-input" type="checkbox" name="term_troquel"> Troquel
+        </div>
+    </div>
+</div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="p-2 border rounded border-danger bg-danger-subtle shadow-sm">
+                    <p class="fw-bold mb-2 border-bottom border-danger pb-1 text-danger small uppercase"><i class="bi bi-exclamation-triangle"></i> Riesgos y Seguridad</p>
+                    <div class="row g-2 small">
+                        <div class="col-md-3 form-check"><input class="form-check-input" type="checkbox" name="r_altura"> Trabajo Altura</div>
+                        <div class="col-md-3 form-check"><input class="form-check-input" type="checkbox" name="r_transito"> Tránsito Vehicular</div>
+                        <div class="col-md-3 form-check"><input class="form-check-input" type="checkbox" name="r_permiso"> Permiso Mun.</div>
+                        <div class="col-md-3 form-check"><input class="form-check-input" type="checkbox" name="r_energia"> Corte Energía</div>
+                        <div class="col-12">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white border-danger text-danger small">Tiempo Est. Instalación:</span>
+                                <input type="text" name="r_tiempo_estimado" class="form-control border-danger" placeholder="Ej: 2 horas / 1 jornada">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+                </div>
+
+                <div class="table-responsive mt-4">
+                    <table class="table table-hover border shadow-sm rounded bg-white">
+                        <thead class="bg-light text-secondary small uppercase">
+                            <tr>
+                                <th style="width: 40%;">Descripción Pieza</th>
+                                <th class="text-center">Medidas (Ancho x Alto)</th>
+                                <th class="text-center">Cant.</th>
+                                <th style="width: 50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyTaller"></tbody>
+                    </table>
+                </div>
+            </div> 
+        </div> <div class="col-md-4">
+            
+   <div class="p-4 rounded-4 bg-white border-start border-5 border-success mb-4 shadow-sm">
+    <h6 class="fw-bold text-success mb-3 tech-title small uppercase">
+        <i class="bi bi-card-checklist me-2"></i>Vehículos Registrados
+    </h6>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+            <thead class="bg-light small">
+                <tr>
+                    <th>#</th>
+                    <th>Vehículo</th>
+                    <th class="text-end">Acción</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyRegistroVehiculos">
+                <tr>
+                    <td colspan="3" class="text-center text-muted small py-3">Sin vehículos</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+    <div class="p-4 rounded-4 bg-white border-start border-5 border-info h-auto shadow-sm">
+        <h6 class="fw-bold text-info mb-4 tech-title small uppercase">
+            <i class="bi bi-gear-wide-connected me-2"></i>Producción
+        </h6>
+        <div class="mb-3">
+            <div class="form-check p-2 rounded hover-check">
+                <input type="checkbox" name="impresion" class="form-check-input" id="admin_impresion">
+                <label class="form-check-label fw-bold ms-2" for="admin_impresion">Impresión</label>
+            </div>
+        </div>
+        <div class="mb-3">
+            <div class="form-check p-2 rounded hover-check">
+                <input type="checkbox" name="corte" class="form-check-input" id="admin_corte">
+                <label class="form-check-label fw-bold ms-2" for="admin_corte">Corte</label>
+            </div>
+        </div>
+    </div>
+</div>
+        </div> <div class="col-12">
+            <div class="p-4 rounded-4 bg-white border border-info mb-4 shadow-sm">
+                <h6 class="fw-bold text-info mb-3 tech-title small uppercase">
+                    <i class="bi bi-stars me-2"></i>Terminaciones
+                </h6>
+                <textarea name="terminaciones_especificas" class="form-control border-2" rows="2"></textarea>
+            </div>
+
+            <div class="p-4 rounded-4 bg-white border shadow-sm">
+                <h6 class="fw-bold text-secondary mb-3 tech-title small uppercase">
+                    <i class="bi bi-chat-dots me-2"></i>Observaciones Generales
+                </h6>
+                <textarea name="instrucciones_admin" class="form-control border-2" rows="3" placeholder="Especifique detalles técnicos"></textarea>
+            </div>
+        </div>
+    </div> </div> <input type="hidden" name="mediciones_taller_json" id="input_taller_json" value="[]">
+
+            <div class="modal-footer bg-dark border-top border-secondary">
+                <button type="button" class="btn btn-outline-light px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary px-5 fw-bold tech-title shadow">
+                    <i class="bi bi-rocket me-2"></i>LANZAR PROCESO
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Estilos para replicar el formulario original */
+    .hover-check { transition: background-color 0.2s; border: 1px solid transparent; }
+    .hover-check:hover { background-color: rgba(0, 0, 0, 0.05); border-color: #dee2e6; cursor: pointer; }
+    .tech-title { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
+    .uppercase { text-transform: uppercase; }
+</style>
+
+<style>
+    /* Estilos para que se vea igual al dashboard original */
+    .hover-check:hover { background-color: rgba(0, 0, 0, 0.05); transition: 0.2s; cursor: pointer; }
+    .btn-tech { font-family: 'Orbitron', sans-serif; }
+    .tech-title { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
+</style>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
@@ -376,23 +862,793 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+{% for p in procesos %}
+<div class="modal fade" id="modalDetalles{{ p.pk }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+            <div class="modal-header bg-dark text-white p-4">
+                <h5 class="modal-title tech-title d-flex align-items-center">
+                    <i class="bi bi-info-circle me-2 text-info fs-4"></i>
+                    EXPEDIENTE: {{ p.cliente.razon_social|upper }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body bg-light p-4">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-7">
+                        <div class="p-3 bg-white rounded shadow-sm h-100 border-start border-4 border-primary">
+                            <h6 class="fw-bold text-primary small uppercase mb-2 text-uppercase">Información del Servicio</h6>
+                            <p class="mb-1 text-dark"><strong>Familia:</strong> {{ p.get_familia_display|default:p.familia }}</p>
+                            <p class="mb-0 text-secondary small"><strong>Instrucciones Admin:</strong></p>
+                            <div class="p-2 bg-light rounded mt-1 small text-dark border">
+                                {{ p.instrucciones_admin|default:"Sin instrucciones de oficina." }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="p-3 bg-white rounded shadow-sm h-100 border-start border-4 border-info">
+                            <h6 class="fw-bold text-info small uppercase mb-3 text-uppercase">Equipo a Cargo</h6>
+                            <div class="mb-2">
+                                <span class="badge bg-light text-dark border w-100 text-start p-2">
+                                    <i class="bi bi-pencil-square me-1"></i> DISEÑO: <strong>{{ p.responsable_diseno|default:"N/A"|upper }}</strong>
+                                </span>
+                            </div>
+                            <div>
+                                <span class="badge bg-light text-dark border w-100 text-start p-2">
+                                    <i class="bi bi-tools me-1"></i> TALLER: <strong>{{ p.responsable_taller|default:"N/A"|upper }}</strong>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-white rounded shadow-sm mb-4">
+    <h6 class="fw-bold text-secondary small text-uppercase mb-3">
+        <i class="bi bi-pencil-ruler"></i> Especificaciones (Diseño)
+    </h6>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        {# --- HITOS DE GESTIÓN --- #}
+        {% if p.reunion %}
+            <span class="badge border text-dark fw-normal"><i class="bi bi-people text-primary"></i> Reunión</span>
+        {% endif %}
+        
+        {% if p.pauta %}
+            <span class="badge border text-dark fw-normal"><i class="bi bi-journal-text text-primary"></i> Pauta</span>
+        {% endif %}
+
+        {# --- FLUJO DE CORRECCIONES --- #}
+        {% if p.enviado_correccion %}
+            <span class="badge border text-dark fw-normal"><i class="bi bi-send text-info"></i> Enviado a Cliente</span>
+        {% endif %}
+
+        {% if p.correccion_1 %}
+            <span class="badge border text-dark fw-normal"><i class="bi bi-1-circle text-warning"></i> Corrección 1</span>
+        {% endif %}
+        
+        {% if p.correccion_2 %}
+            <span class="badge border text-dark fw-normal"><i class="bi bi-2-circle text-warning"></i> Corrección 2</span>
+        {% endif %}
+        
+        {% if p.correccion_3 %}
+            <span class="badge border text-dark fw-normal"><i class="bi bi-3-circle text-warning"></i> Corrección 3</span>
+        {% endif %}
+
+        {# --- ESTADO FINAL --- #}
+        {% if p.aprobacion_final %}
+            <span class="badge border text-dark fw-normal"><i class="bi bi-check2-all text-success"></i> Diseño Aprobado</span>
+        {% endif %}
+    </div>
+
+    {# --- TEXTO DE OBSERVACIONES (Sincronizado con tu View) --- #}
+    {% if p.observaciones_terreno %}
+        <div class="mt-2 p-2 bg-light rounded border small text-muted">
+            <i class="bi bi-info-circle me-1"></i> {{ p.observaciones_terreno }}
+        </div>
+    {% endif %}
+</div>
+
+                <div class="p-3 bg-white rounded shadow-sm mb-4 border-start border-4 border-danger">
+                    <h6 class="fw-bold text-danger small text-uppercase mb-3">
+                        <i class="bi bi-rulers"></i> Dimensiones Registradas (Terreno)
+                    </h6>
+                    {% if p.mediciones_json and p.mediciones_json != "[]" %}
+                        <div class="table-responsive rounded border">
+                            <table class="table table-sm table-hover mb-0 text-center">
+                                <thead class="table-dark" style="font-size: 0.75rem;">
+                                    <tr>
+                                        <th class="ps-3 text-start">ÍTEM</th>
+                                        <th>ANCHO</th>
+                                        <th>LARGO</th>
+                                        <th class="pe-3">CANT.</th>
+                                    </tr>
+                                </thead>
+                                <tbody style="font-size: 0.85rem;">
+                                    {% for med in p.get_mediciones_list %}
+                                    <tr>
+                                        <td class="ps-3 text-start fw-bold">{{ med.descripcion }}</td>
+                                        <td class="text-danger fw-bold">{{ med.ancho }}</td>
+                                        <td class="text-danger fw-bold">{{ med.largo }}</td>
+                                        <td class="pe-3">{{ med.cantidad }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-2 bg-light rounded border border-dashed small text-muted">
+                            <i class="bi bi-exclamation-triangle"></i> Sin mediciones de terreno.
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="p-4 bg-white rounded shadow-sm mb-4 border-start border-4 border-success">
+    <h6 class="fw-bold text-success text-uppercase mb-4">
+        <i class="bi bi-clipboard-check-fill me-2"></i>Terreno
+    </h6>
+
+    {% if p.levantamiento %}
+    <div class="row g-4">
+        
+        <div class="col-12">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="small text-muted text-uppercase fw-bold">Ubicación</label>
+                    <div class="p-2 border rounded bg-light fw-bold text-uppercase">{{ p.levantamiento.ubicacion|default:"No definido" }}</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="small text-muted text-uppercase fw-bold">Ancho (cm)</label>
+                    <div class="p-2 border rounded bg-light fw-bold">{{ p.levantamiento.ancho }}</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="small text-muted text-uppercase fw-bold">Alto (cm)</label>
+                    <div class="p-2 border rounded bg-light fw-bold">{{ p.levantamiento.alto }}</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="small text-muted text-uppercase fw-bold">Profundidad</label>
+                    <div class="p-2 border rounded bg-light fw-bold">{{ p.levantamiento.profundidad_letrero }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="p-3 border rounded h-100">
+                <p class="small fw-bold text-secondary text-uppercase mb-2 border-bottom">Materiales y Terminación</p>
+                <div class="d-flex flex-wrap gap-2">
+                    {# Materiales #}
+                    {% if p.levantamiento.mat_pvc %}<span class="badge border text-dark fw-normal">PVC Front</span>{% endif %}
+                    {% if p.levantamiento.mat_pvc_lum %}<span class="badge border text-dark fw-normal">PVC Backlight</span>{% endif %}
+                    {% if p.levantamiento.mat_acrilico %}<span class="badge border text-dark fw-normal">Acrílico</span>{% endif %}
+                    {% if p.levantamiento.mat_adh_nor %}<span class="badge border text-dark fw-normal">Adhesivo Normal</span>{% endif %}
+                    {% if p.levantamiento.mat_adh_trans %}<span class="badge border text-dark fw-normal">Adhesivo Transp.</span>{% endif %}
+                    
+                    {# Terminaciones (Directo al grano) #}
+                    {% if p.levantamiento.term_ojetillos %}<span class="badge bg-info">OJETILLOS</span>{% endif %}
+                    {% if p.levantamiento.term_bolsillo %}<span class="badge bg-info">BOLSILLO</span>{% endif %}
+                    {% if p.levantamiento.term_tubo %}<span class="badge bg-primary"> TUBO</span>{% endif %}
+                    {% if p.levantamiento.term_bastidor %}<span class="badge bg-primary">BASTIDOR</span>{% endif %}
+                    {% if p.levantamiento.term_laminado %}<span class="badge bg-info">LAMINADO</span>{% endif %}
+                    {% if p.levantamiento.term_troquel %}<span class="badge bg-secondary">TROQUELADO</span>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="p-3 border rounded h-100">
+                <p class="small fw-bold text-secondary text-uppercase mb-2 border-bottom">Instalación y Soporte</p>
+                <div class="small">
+                    <p class="mb-1"><strong>Altura:</strong> {{ p.levantamiento.altura_instalacion }} mt</p>
+                    <p class="mb-1"><strong>Acceso:</strong> 
+                        {% if p.levantamiento.acceso_escalera %}Escalera {% endif %}
+                        {% if p.levantamiento.acceso_andamio %}Andamio {% endif %}
+                        {% if p.levantamiento.acceso_grua %}Grúa {% endif %}
+                    </p>
+                    <p class="mb-1"><strong>Soporte:</strong> 
+                        {% if p.levantamiento.soporte_muro %}Muro {% endif %}
+                        {% if p.levantamiento.soporte_metal %}Metal {% endif %}
+                        {% if p.levantamiento.soporte_vidrio %}Vidrio {% endif %}
+                        {% if p.levantamiento.soporte_panel_compuesto %}Panel Compuesto {% endif %}
+                        {% if p.levantamiento.soporte_otro %}{{ p.levantamiento.soporte_otro }}{% endif %}
+                    </p>
+                    <p class="mb-0"><strong>Eléctrico:</strong> 
+                        {% if p.levantamiento.punto_cercano %}Sí ({{ p.levantamiento.voltaje }}){% else %}No{% endif %}
+                        {% if p.levantamiento.tablero_accesible %}| Tablero Accesible{% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="p-3 border rounded {% if p.levantamiento.riesgo_altura or p.levantamiento.riesgo_transito or p.levantamiento.riesgo_energia %}bg-danger bg-opacity-10 border-danger{% else %}bg-light{% endif %}">
+                <p class="small fw-bold text-secondary text-uppercase mb-2">Riesgos Críticos y Tiempos</p>
+                <div class="d-flex flex-wrap gap-3 small fw-bold">
+                    {% if p.levantamiento.riesgo_altura %}<span><i class="bi bi-exclamation-triangle-fill text-danger"></i> ALTURA</span>{% endif %}
+                    {% if p.levantamiento.riesgo_transito %}<span><i class="bi bi-exclamation-triangle-fill text-danger"></i> TRÁNSITO</span>{% endif %}
+                    {% if p.levantamiento.riesgo_permiso %}<span><i class="bi bi-exclamation-triangle-fill text-danger"></i> PERMISOS</span>{% endif %}
+                    {% if p.levantamiento.riesgo_energia %}<span><i class="bi bi-exclamation-triangle-fill text-danger"></i> ENERGÍA</span>{% endif %}
+                    <span class="ms-auto text-dark">TIEMPO EST.: {{ p.levantamiento.tiempo_estimado_instalacion|upper }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-3 text-muted">No hay datos de levantamiento.</div>
+    {% endif %}
+</div>
+
+                <div class="p-3 bg-white rounded shadow-sm mb-4 border-start border-4 border-warning">
+                    <h6 class="fw-bold text-warning small text-uppercase mb-3">
+                        <i class="bi bi-truck"></i> Mediciones de Vehículo (Taller)
+                    </h6>
+                    {% if p.mediciones_taller_json and p.mediciones_taller_json != "[]" %}
+                        <div class="table-responsive rounded border">
+                            <table class="table table-sm table-hover mb-0 text-center">
+                                <thead class="table-warning" style="font-size: 0.75rem;">
+                                    <tr>
+                                        <th class="ps-3 text-start">CATEGORÍA / PIEZA</th>
+                                        <th>MEDIDA (cm)</th>
+                                    </tr>
+                                </thead>
+                                <tbody style="font-size: 0.85rem;">
+                                    {% for med in p.get_mediciones_taller_list %}
+                                    <tr>
+                                        <td class="ps-3 text-start fw-bold">
+                                            <small class="text-muted text-uppercase d-block" style="font-size: 0.65rem;">{{ med.categoria }}</small>
+                                            {{ med.nombre }}
+                                        </td>
+                                        <td class="text-dark fw-bold" style="font-size: 1rem;">{{ med.medida }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-2 bg-light rounded border border-dashed small text-muted">
+                            <i class="bi bi-info-circle"></i> Sin mediciones de taller registradas.
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="p-3 bg-white rounded shadow-sm mb-4">
+                    <h6 class="fw-bold text-secondary small text-uppercase mb-3"><i class="bi bi-box-seam"></i> Especificaciones (taller)</h6>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+        {# --- MATERIALES RÍGIDOS Y TELAS --- #}
+        {% if p.acrilico %}<span class="badge border text-dark fw-normal"><i class="bi bi-check2 text-success"></i> Acrílico</span>{% endif %}
+        {% if p.sintra %}<span class="badge border text-dark fw-normal"><i class="bi bi-check2 text-success"></i> Sintra</span>{% endif %}
+        {% if p.tela_pvc %}<span class="badge border text-dark fw-normal"><i class="bi bi-check2 text-success"></i> Tela PVC</span>{% endif %}
+
+        {# --- ADHESIVOS --- #}
+        {% if p.ad_prom %}<span class="badge border text-dark fw-normal"><i class="bi bi-sticky text-warning"></i> Ad. Promocional</span>{% endif %}
+        {% if p.ad_vehicular %}<span class="badge border text-dark fw-normal"><i class="bi bi-truck text-warning"></i> Ad. Vehicular</span>{% endif %}
+        {% if p.empavonado %}<span class="badge border text-dark fw-normal"><i class="bi bi-eye-slash text-secondary"></i> Empavonado</span>{% endif %}
+        {% if p.microperf %}<span class="badge border text-dark fw-normal"><i class="bi bi-grid-3x3 text-secondary"></i> Microperforado</span>{% endif %}
+
+        {# --- PROCESOS Y TERMINACIONES --- #}
+        {% if p.impresion %}<span class="badge border text-dark fw-normal"><i class="bi bi-printer text-info"></i> Impresión</span>{% endif %}
+        {% if p.corte %}<span class="badge border text-dark fw-normal"><i class="bi bi-scissors text-danger"></i> Corte</span>{% endif %}
+        {% if p.ojetillo %}<span class="badge border text-dark fw-normal"><i class="bi bi-circle text-primary"></i> Ojetillos</span>{% endif %}
+        {% if p.sellado %}<span class="badge border text-dark fw-normal"><i class="bi bi-layers text-primary"></i> Sellado</span>{% endif %}
+        
+        {# --- OTROS --- #}
+        {% if p.otros_materiales %}
+            <span class="badge bg-dark text-white fw-normal">{{ p.otros_materiales }}</span>
+        {% endif %}
+    </div>
+                </div>
+
+                <div class="p-3 bg-white rounded shadow-sm border-top border-5 border-success">
+                    <h6 class="fw-bold text-success small text-uppercase mb-3"><i class="bi bi-cloud-download"></i> Archivos y Fotos</h6>
+                    <div class="row">
+                        <div class="col-md-6 border-end">
+                            <p class="small mb-2 fw-bold">Archivos Finales:</p>
+                            {% if p.archivos.all %}
+                                {% for doc in p.archivos.all %}
+                                    <div class="mb-2">
+                                        <a href="{{ doc.archivo.url }}" class="btn btn-sm btn-outline-success w-100 text-start overflow-hidden" target="_blank">
+                                            <i class="bi bi-file-earmark-check-fill"></i> {{ doc.archivo.name|cut:"aprobaciones/"|truncatechars:20 }}
+                                        </a>
+                                        <small class="text-muted d-block" style="font-size: 0.6rem;">{{ doc.fecha_subida|date:"d/m H:i" }}</small>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="p-2 border rounded bg-light text-center small text-muted italic">Sin archivos.</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 ps-md-4 mt-3 mt-md-0">
+                            <p class="small mb-2 fw-bold">Fotos de Terreno:</p>
+                            <div class="row g-2">
+                                {% for foto in p.fotos_terreno.all %}
+                                    <div class="col-4">
+                                        <a href="{{ foto.imagen.url }}" target="_blank">
+                                            <img src="{{ foto.imagen.url }}" class="rounded shadow-sm border" style="width: 100%; height: 60px; object-fit: cover;">
+                                        </a>
+                                    </div>
+                                {% empty %}
+                                    <div class="col-12"><span class="text-muted small italic">Sin fotos.</span></div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary px-4 fw-bold shadow-sm" data-bs-dismiss="modal" style="border-radius: 8px;">CERRAR</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 <script>
-function confirmarCierre(id, cliente) {
+let registroVehiculos = [];
+let listaMediciones = []; // Para DISEÑO
+let listaTaller = [];     // Para TALLER
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Restricción de fecha
+    const fechaEntregaInput = document.getElementById('fecha_entrega');
+    if (fechaEntregaInput) {
+        fechaEntregaInput.setAttribute('min', new Date().toISOString().split('T')[0]);
+    }
+
+    const swDiseno = document.getElementById('switchDiseno');
+    const swTaller = document.getElementById('switchTaller');
+
+    function toggleForms() {
+        const formDiseno = document.getElementById('formDiseno');
+        const formTaller = document.getElementById('formTaller');
+        const formTerreno = document.getElementById('formTerreno');
+        const divRespDiseno = document.getElementById('div_responsable_diseno');
+        const divRespTaller = document.getElementById('div_responsable_taller');
+
+        if (swDiseno && formDiseno && formTerreno && divRespDiseno) {
+            const isVisible = swDiseno.checked;
+            formDiseno.style.display = isVisible ? 'block' : 'none';
+            formTerreno.style.display = isVisible ? 'block' : 'none';
+            divRespDiseno.style.display = isVisible ? 'block' : 'none';
+            document.getElementById('select_diseno').disabled = !isVisible;
+        }
+
+        if (swTaller && formTaller && divRespTaller) {
+            const isVisible = swTaller.checked;
+            formTaller.style.display = isVisible ? 'block' : 'none';
+            divRespTaller.style.display = isVisible ? 'block' : 'none';
+            document.getElementById('select_taller').disabled = !isVisible;
+        }
+    }
+
+    if (swDiseno) swDiseno.addEventListener('change', toggleForms);
+    if (swTaller) swTaller.addEventListener('change', toggleForms);
+    toggleForms();
+});
+
+
+function actualizarResumenLateral() {
+    const contenedor = document.getElementById('resumenVerificacion');
+    if (!contenedor) return;
+
+    // Extraemos los tipos de vehículos únicos de la listaTaller
+    // Por ejemplo, si en la descripción dice "CAMIÓN: PUERTA", sacamos "CAMIÓN"
+    const tiposEncontrados = [...new Set(listaTaller.map(item => {
+        return item.descripcion.includes(':') ? item.descripcion.split(':')[0] : 'MANUAL';
+    }))];
+
+    if (tiposEncontrados.length === 0) {
+        contenedor.innerHTML = '<p class="text-muted text-center py-2">No hay vehículos cargados</p>';
+        return;
+    }
+
+    // Dibujamos el resumen
+    let html = '<ul class="list-group list-group-flush">';
+    tiposEncontrados.forEach(tipo => {
+        html += `
+            <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                <span class="fw-bold text-dark"><i class="bi bi-truck text-success me-2"></i>${tipo}</span>
+                <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">Listo</span>
+            </li>`;
+    });
+    html += '</ul>';
+    
+    contenedor.innerHTML = html;
+}
+
+const piezasVehiculo = [
+    { cat: 'CAMIONETA', items: ['Puerta Chofer Del.', 'Puerta Chofer Tras.', 'Puerta Copiloto Del.', 'Puerta Copiloto Tras.', 'Lateral Zona Carga', 'Portalón Trasero', 'Lateral Completo', 'Atrás (Medida Total)'] },
+    { cat: 'FURGÓN', items: ['Puerta Chofer', 'Puerta Copiloto', 'Puerta Corredera', 'Ventanal Corredera', 'Lado Ventana Carga', 'Lateral Completo', 'Atrás Completo', 'Puertas Divididas', 'Lado Patente', 'Lado Logo'] },
+    { cat: 'CAMIÓN', items: ['Puerta Chofer', 'Lateral Zona Carga', 'Portalón'] }
+];
+
+const piezasTerreno = ['Frontal', 'Lateral Izquierdo', 'Lateral Derecho', 'Letrero Superior', 'Ventanales', 'Muro Principal'];
+
+function cargarItemsTaller(categoria) {
+    // 1. LIMPIAR LA LISTA ACTUAL (Este es el paso que faltaba)
+    listaTaller = []; 
+
+    const piezas = {
+    'CAMIONETA': [
+        'Puerta Chofer Delantera', 
+        'Puerta Chofer Trasera', 
+        'Puerta Copiloto Delantera', 
+        'Puerta Copiloto Trasera', 
+        'Lateral Zona de Carga', 
+        'Portalón (Parte Trasera)',
+        'Lateral Completo (x2)', 
+        'Atrás (Completo)'
+    ],
+    'FURGÓN': [
+        'Puerta Chofer', 
+        'Puerta Corredera Copiloto', 
+        'Lateral Completo (Lado Corredera)', 
+        'Ventanal Puerta Corrediza',
+        'Puerta Copiloto', 
+        'Lado Ventana Zona de Carga', 
+        'Lateral Completo', 
+        'Atrás Completo', 
+        'Ventanal Completo', 
+        'Puertas Divididas', 
+        'Lado Patente', 
+        'Lado Logo Vehículo'
+    ],
+    'CAMIÓN': [
+        'Puerta Chofer', 
+        'Lateral Zona de Carga (x2)', 
+        'Portalón'
+    ]
+};
+
+    const listaSeleccionada = piezas[categoria] || [];
+    
+    listaSeleccionada.forEach(p => {
+        listaTaller.push({
+            id: Date.now() + Math.random(),
+            descripcion: `${categoria}: ${p}`,
+            ancho: "", alto: "", cantidad: 1
+        });
+    });
+    
+    
+    renderizarTablaTaller();
+}
+
+function actualizarTablaRegistro() {
+    const tbody = document.getElementById('tbodyRegistroVehiculos');
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    if (registroVehiculos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted small py-3">Sin registros</td></tr>';
+        return;
+    }
+
+    registroVehiculos.forEach((reg, index) => {
+        tbody.innerHTML += `
+            <tr class="bg-light">
+                <td class="small text-muted">${index + 1}</td>
+                <td class="small">
+                    <div class="fw-bold text-uppercase" style="font-size:0.7rem;">${reg.nombre}</div>
+                    <div class="text-primary fw-bold">${reg.medida} <span class="text-dark">(x${reg.cantidad})</span></div>
+                </td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-sm text-danger p-0" onclick="eliminarDelRegistro(${index})">
+                        <i class="bi bi-x-circle"></i>
+                    </button>
+                </td>
+            </tr>`;
+    });
+
+    // Sincronizamos el hidden input para el POST de Django
+    document.getElementById('input_taller_json').value = JSON.stringify(registroVehiculos);
+}
+
+function eliminarDelRegistro(index, nombreVehiculo) {
+    // 1. Quitamos del registro lateral
+    registroVehiculos.splice(index, 1);
+    
+    // 2. OPCIONAL: Si quieres que al borrar del registro también se borren las medidas:
+    listaTaller = listaTaller.filter(item => !item.descripcion.startsWith(nombreVehiculo));
+    
+    renderizarTablaTaller();
+    actualizarTablaRegistro();
+}
+
+function mostrarPlantilla(tipo) {
+    const contenedor = document.getElementById('contenedorPlantillas');
+    const divBotones = document.getElementById('botonesPiezas');
+    const zonaTecnica = document.getElementById('zonaFormularioTecnico'); // El nuevo div
+    
+    divBotones.innerHTML = ''; 
+    contenedor.style.display = 'block';
+
+    if (tipo === 'vehiculo') {
+        // Ocultamos la parte técnica si es vehículo
+        if(zonaTecnica) zonaTecnica.style.display = 'none';
+
+        const categorias = [
+            {n: 'CAMIONETA', v: 'CAMIONETA', c: 'btn-outline-primary'},
+            {n: 'FURGÓN', v: 'FURGÓN', c: 'btn-outline-info'},
+            {n: 'CAMIÓN', v: 'CAMIÓN', c: 'btn-outline-dark'}
+        ];
+
+        categorias.forEach(cat => {
+            let btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `btn btn-sm ${cat.c} me-2 fw-bold mb-2 shadow-sm`;
+            btn.innerHTML = `<i class="bi bi-truck"></i> CARGAR ${cat.n}`;
+            btn.onclick = () => cargarItemsTaller(cat.v); 
+            divBotones.appendChild(btn);
+        });
+    } else {
+        // --- MODO TERRENO ---
+        // 1. Mostramos el formulario técnico (lo que querías que aparezca)
+        if(zonaTecnica) {
+            zonaTecnica.style.display = 'block';
+            // Animación simple de entrada si usas Bootstrap/CSS
+            zonaTecnica.classList.add('animate__animated', 'animate__fadeIn'); 
+        }
+
+        // 2. Cargamos los botones de piezas (Frontal, Lateral, etc.)
+        piezasTerreno.forEach(pieza => {
+            let btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-light border m-1 shadow-sm fw-bold text-secondary';
+            btn.style.fontSize = '0.75rem';
+            btn.innerText = pieza;
+            btn.onclick = () => agregarMedicionTaller(`TERRENO: ${pieza}`);
+            divBotones.appendChild(btn);
+        });
+    }
+}
+
+
+
+function agregarMedicionTaller(nombre) {
+    listaTaller.push({
+        id: Date.now() + Math.random(),
+        descripcion: nombre,
+        ancho: "", alto: "", cantidad: 1
+    });
+    renderizarTablaTaller();
+}
+
+// 4. RENDERIZADO DE TABLAS (Separadas)
+function renderizarTabla() { // DISEÑO / TERRENO
+    const tbody = document.querySelector('#tablaMedicionesTerreno tbody');
+    if(!tbody) return;
+    tbody.innerHTML = "";
+
+    listaMediciones.forEach((m, index) => {
+        tbody.innerHTML += `
+        <tr class="align-middle">
+            <td class="small fw-bold text-start ps-2">${m.descripcion}</td>
+            <td>
+                <div class="d-flex gap-1 justify-content-center align-items-center">
+                    <input type="text" class="form-control form-control-sm text-center" value="${m.ancho}" 
+                           oninput="listaMediciones[${index}].ancho=this.value; sincronizarInputs()" style="width:60px;">
+                    <span class="small">x</span>
+                    <input type="text" class="form-control form-control-sm text-center" value="${m.largo}" 
+                           oninput="listaMediciones[${index}].largo=this.value; sincronizarInputs()" style="width:60px;">
+                </div>
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm text-center mx-auto" value="${m.cantidad}" 
+                       oninput="listaMediciones[${index}].cantidad=this.value; sincronizarInputs()" style="width:50px;">
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm text-danger" onclick="borrarMedicion(${m.id}, 'diseno')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+    });
+    sincronizarInputs();
+}
+
+function confirmarPiezaTaller(index) {
+    const pieza = listaTaller[index];
+
+    if (!pieza.ancho || !pieza.alto) {
+        Swal.fire({ icon: 'warning', title: 'Campos vacíos', text: 'Ingresa las medidas antes de guardar.' });
+        return;
+    }
+
+    // 1. Mandamos la información al registro de la derecha
+    registroVehiculos.push({
+        nombre: pieza.descripcion,
+        medida: `${pieza.ancho} x ${pieza.alto}`,
+        cantidad: pieza.cantidad
+    });
+
+    // 2. ¡LA MAGIA! Limpiamos los campos en la lista de la izquierda pero NO la eliminamos
+    listaTaller[index].ancho = "";
+    listaTaller[index].alto = "";
+    listaTaller[index].cantidad = 1;
+
+    // 3. Refrescamos visualmente
+    renderizarTablaTaller();
+    actualizarTablaRegistro();
+
+    // Feedback visual en el botón o con Toast
+    const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1000 });
+    Toast.fire({ icon: 'success', title: 'Registrado' });
+}
+
+function renderizarTablaTaller() {
+    const tbody = document.getElementById('tbodyTaller'); 
+    if(!tbody) return;
+
+    tbody.innerHTML = "";
+    listaTaller.forEach((m, index) => {
+        tbody.innerHTML += `
+            <tr class="align-middle">
+                <td class="text-start">
+                    <span class="fw-bold small text-uppercase">${m.descripcion}</span>
+                </td>
+                <td>
+                    <div class="d-flex gap-1 justify-content-center align-items-center">
+                        <input type="text" class="form-control form-control-sm text-center" placeholder="An" 
+                               oninput="listaTaller[${index}].ancho=this.value" style="width: 65px;">
+                        <input type="text" class="form-control form-control-sm text-center" placeholder="Al" 
+                               oninput="listaTaller[${index}].alto=this.value" style="width: 65px;">
+                    </div>
+                </td>
+                <td class="text-center">
+                    <div class="d-flex gap-1 justify-content-center">
+                        <button type="button" class="btn btn-sm btn-success" onclick="confirmarPiezaTaller(${index})">
+                            <i class="bi bi-floppy"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="borrarMedicion(${m.id}, 'taller')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+    });
+    sincronizarInputs();
+}
+
+function sincronizarInputs() {
+    // Para DISEÑO (Terreno) se mantiene igual
+    const inputDiseno = document.getElementById('input_mediciones_json');
+    if (inputDiseno) {
+        inputDiseno.value = JSON.stringify(listaMediciones);
+    }
+
+    // PARA TALLER: Aquí estaba el error. 
+    // Debemos enviar 'registroVehiculos' que es donde están las medidas confirmadas.
+    const inputTaller = document.getElementById('input_taller_json');
+    if (inputTaller) {
+        inputTaller.value = JSON.stringify(registroVehiculos);
+    }
+}
+
+function borrarMedicion(id, tipo) {
+    if(tipo === 'taller') {
+        listaTaller = listaTaller.filter(m => m.id !== id);
+        renderizarTablaTaller();
+    } else {
+        listaMediciones = listaMediciones.filter(m => m.id !== id);
+        renderizarTabla();
+    }
+}
+
+function confirmarCierre(procesoId, clienteNombre, opcionesFacturas) {
+    // Validar si el cliente tiene facturas creadas y libres
+    if (Object.keys(opcionesFacturas).length === 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'No hay facturas disponibles',
+            text: `El cliente ${clienteNombre} no tiene facturas pendientes de vincular. Crea una factura antes de cerrar.`,
+            confirmButtonColor: '#d33'
+        });
+        return;
+    }
+
     Swal.fire({
-        title: '¿Finalizar proceso?',
-        text: "El proyecto de " + cliente + " se marcará como 100% completado.",
+        title: 'Finalizar Proceso',
+        html: `Selecciona la factura para <b>${clienteNombre}</b>`,
         icon: 'warning',
+        input: 'select',
+        inputOptions: opcionesFacturas,
+        inputPlaceholder: '-- Seleccionar Factura --',
         showCancelButton: true,
+        confirmButtonText: 'Vincular y Archivar',
+        cancelButtonText: 'Cancelar',
         confirmButtonColor: '#198754',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sí, finalizar',
-        cancelButtonText: 'Cancelar'
+        reverseButtons: true,
+        inputValidator: (value) => {
+            return new Promise((resolve) => {
+                if (value) {
+                    resolve();
+                } else {
+                    resolve('¡Es obligatorio seleccionar una factura!');
+                }
+            });
+        }
     }).then((result) => {
         if (result.isConfirmed) {
-            // USAMOS LA RUTA RELATIVA LIMPIA
-            // Si tu proyecto usa el prefijo 'usuarios/', debe ir aquí:
-            window.location.href = "/usuarios/proceso/cerrar/" + id + "/";
+            const facturaId = result.value;
+            
+            // Pantalla de carga profesional
+            Swal.fire({
+                title: 'Cerrando proyecto...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+           
+            window.location.href = `/usuarios/proceso/cerrar/${procesoId}/?factura_id=${facturaId}`;
         }
-    })
+    });
 }
+
+function agregarMedicionAlListado() {
+    // 1. Capturamos los valores de los inputs
+    const desc = document.getElementById('med_desc').value;
+    const largo = document.getElementById('med_largo').value;
+    const ancho = document.getElementById('med_ancho').value;
+    const cant = document.getElementById('med_cant').value;
+
+    // 2. Validación básica: que no estén vacíos
+    if (!desc || !largo || !ancho || !cant) {
+        alert("Por favor, completa todos los campos de la medición (Título, Largo, Ancho y Cantidad).");
+        return;
+    }
+
+    // 3. Creamos el objeto y lo metemos al array global de diseño
+    const nuevaMedida = {
+        id: Date.now(), // ID único para poder borrarla luego
+        descripcion: desc,
+        largo: largo,
+        ancho: ancho,
+        cantidad: cant
+    };
+
+    listaMediciones.push(nuevaMedida);
+
+    // 4. Limpiamos los inputs para la siguiente entrada
+    document.getElementById('med_desc').value = "";
+    document.getElementById('med_largo').value = "";
+    document.getElementById('med_ancho').value = "";
+    document.getElementById('med_cant').value = "1"; // Dejamos 1 por defecto
+
+    // 5. Refrescamos la tabla visual y sincronizamos el input hidden para Django
+    renderizarTabla();
+}
+
+document.addEventListener("click", function(e) {
+    if (e.target.closest(".btn-editar")) {
+
+        const btn = e.target.closest(".btn-editar");
+        const id = btn.dataset.id;
+
+        fetch(`/usuarios/proceso/${id}/json/`)
+        .then(res => res.json())
+        .then(data => {
+
+            document.getElementById("proceso_id").value = data.id;
+            document.getElementById("cliente").value = data.cliente;
+            document.getElementById("fecha_entrega").value = data.fecha_entrega;
+
+            new bootstrap.Modal(
+                document.getElementById("modalCrearProceso")
+            ).show();
+
+        })
+        .catch(err => console.log("Error editar:", err));
+
+    }
+});
+
 </script>
+{% if messages %}
+    {% for message in messages %}
+        <script>
+            Swal.fire({
+                icon: '{% if message.tags == "error" %}error{% else %}success{% endif %}',
+                title: '{% if message.tags == "error" %}¡Ups!{% else %}¡Logrado!{% endif %}',
+                text: '{{ message }}',
+                confirmButtonColor: '#0d6efd'
+            });
+        </script>
+    {% endfor %}
+{% endif %}

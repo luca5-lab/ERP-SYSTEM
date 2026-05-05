@@ -44,5 +44,17 @@ urlpatterns = [
     path('historial-acciones/', views.lista_acciones, name='lista_acciones'),
     path('proceso/crear-admin/', views.crear_proceso_admin, name='crear_proceso_admin'),
     path('stock/editar-nombre/', views.editar_material_nombre_ajax, name='editar_material_nombre_ajax'),
-    
+    path('facturaciones/', views.lista_facturas, name='lista_facturas'),
+    path('ventas/', views.lista_ventas, name='lista_ventas'),
+    path('compras/', views.lista_compras, name='lista_compras'),
+    path('ordenes de compra/', views.lista_ordenes_compra, name= 'lista_ordenes_compra'),
+    path('orden-compra/nueva/', views.crear_orden_compra, name='crear_orden_compra'),
+    path('orden-compra/guardar/', views.guardar_orden_compra, name='guardar_orden_compra'),
+    path('orden-compra/pdf/<int:pk>/', views.generar_pdf_orden_compra, name='generar_pdf_orden_compra'),
+    path('cotizaciones/servicios/guardar/', views.guardar_cotizacion_servicio, name='guardar_cotizacion_servicio'),
+    path('cotizaciones/articulos/editar/<int:pk>/', views.editar_cotizacion_articulo, name='editar_cotizacion_articulo'),
+    path('cotizaciones/servicios/editar/<int:pk>/', views.editar_cotizacion_servicio, name='editar_cotizacion_servicio'),
+    path('proceso/pdf/<int:pk>/', views.generar_pdf_proceso, name='generar_pdf_proceso'),
+    path("proceso/admin/editar/<int:pk>/", views.editar_proceso_admin, name="editar_proceso_admin"),
+
 ]

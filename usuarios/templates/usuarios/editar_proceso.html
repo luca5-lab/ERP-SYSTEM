@@ -67,37 +67,246 @@
                         </div>
 
                         <div class="col-12">
-    <div class="p-4 rounded-4 bg-white border shadow-sm">
-        <h6 class="fw-bold text-secondary mb-3 tech-title small uppercase">
-            <i class="bi bi-chat-dots me-2"></i>Observaciones y Control de Calidad
-        </h6>
-        <div class="row mt-3">
-            <div class="col-md-7 border-end">
-                {{ form.terminaciones|as_crispy_field }}
+                            <div class="p-4 rounded-4 bg-white border border-primary mb-4 shadow-sm" style="border-width: 2px !important;">
+                                <h6 class="fw-bold text-primary mb-3 tech-title small uppercase">
+                                    <i class="bi bi-info-circle-fill me-2"></i>Instrucciones de Administración
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6 border-end">
+                                        <label class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">Encargado:</label>
+                                        <div class="p-2 bg-light rounded border mt-1 mb-3">
+                                            <span class="small fw-bold">{{ proceso.responsable_taller|default:"No asignado" }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 ps-4">
+                                        <label class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">Notas:</label>
+                                        <div class="p-3 bg-light rounded border mt-1" style="min-height: 80px;">
+                                            <span class="small">{{ proceso.instrucciones_admin|default:"Sin instrucciones."|linebreaksbr }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 rounded-4 bg-white border border-warning mb-4 shadow-sm" style="border-width: 2px !important;">
+                                <h6 class="fw-bold text-warning mb-3 tech-title small uppercase">
+                                    <i class="bi bi-pencil-square me-2"></i>Editar Mediciones de Vehículo
+                                </h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th class="small">Pieza</th>
+                                                <th class="small text-center">Ancho x Alto (cm)</th>
+                                                <th class="small text-end">Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tabla_edicion_taller">
+                                            </tbody>
+                                    </table>
+                                </div>
+                                <input type="hidden" name="mediciones_taller_json" id="input_json_taller_edit" value="{{ proceso.mediciones_taller_json }}">
+                                
+                                <div class="mb-4">
+    <label class="small fw-bold text-muted text-uppercase d-block mb-2">1. Selecciona el Tipo de Vehículo:</label>
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <button type="button" class="btn btn-dark fw-bold shadow-sm py-2 px-3" onclick="mostrarOpciones('CAMIONETA')">
+            <i class="bi bi-truck me-2"></i> CAMIONETA
+        </button>
+        <button type="button" class="btn btn-dark fw-bold shadow-sm py-2 px-3" onclick="mostrarOpciones('FURGÓN')">
+            <i class="bi bi-bus-front me-2"></i> FURGÓN
+        </button>
+        <button type="button" class="btn btn-dark fw-bold shadow-sm py-2 px-3" onclick="mostrarOpciones('CAMIÓN')">
+            <i class="bi bi-truck-flatbed me-2"></i> CAMIÓN
+        </button>
+    </div>
+
+    <div id="selector-piezas-dinamico" class="p-3 border rounded-4 bg-white shadow-sm d-none animate-fade-in">
+        <h6 id="titulo-tipo-vehiculo" class="small fw-bold text-primary text-uppercase mb-3"></h6>
+        <div id="lista-botones-piezas" class="d-flex flex-wrap gap-2">
+            </div>
+    </div>
+</div>
+                            </div>
+
+                            <div id="zonaFormularioTecnico" class="mt-4 animate__animated animate__fadeIn">
+    <div class="p-4 border rounded-3 shadow-sm bg-white" style="font-family: sans-serif; font-size: 0.85rem; border-left: 5px solid #0d6efd !important;">
+        
+        <div class="d-flex justify-content-between align-items-center border-bottom border-2 mb-3 pb-2">
+            <div>
+                <h6 class="fw-bold mb-0 text-uppercase" style="letter-spacing: 1px; color: #0d6efd;">Ficha Técnica de Terreno - USBTECH</h6>
+                <small class="text-muted text-uppercase" style="font-size: 0.65rem;">Detalles de Instalación y Fabricación (Desde Levantamiento)</small>
+            </div>
+            <i class="bi bi-rulers text-primary fs-4"></i>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="p-3 border rounded bg-light h-100">
+                    <p class="fw-bold mb-2 border-bottom pb-1 text-primary small uppercase"><i class="bi bi-pin-map"></i> Ubicación y Acceso</p>
+                    <div class="mb-2">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="terreno_ubicacion" value="interior" {% if proceso.levantamiento.ubicacion == 'interior' %}checked{% endif %}> Interior
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="terreno_ubicacion" value="exterior" {% if proceso.levantamiento.ubicacion == 'exterior' %}checked{% endif %}> Exterior
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="small fw-bold">Altura de instalación (m):</label>
+                        <input type="number" step="any" inputmode="decimal" 
+       name="terreno_altura_m" 
+       class="form-control form-control-sm"
+       value="{{ proceso.levantamiento.altura_instalacion|stringformat:'.1f' }}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="d-block small fw-bold">Medios de Acceso:</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <div class="form-check small"><input class="form-check-input" type="checkbox" name="acc_escalera" {% if proceso.levantamiento.acceso_escalera %}checked{% endif %}> Escalera</div>
+                            <div class="form-check small"><input class="form-check-input" type="checkbox" name="acc_andamio" {% if proceso.levantamiento.acceso_andamio %}checked{% endif %}> Andamio</div>
+                            <div class="form-check small"><input class="form-check-input" type="checkbox" name="acc_grua" {% if proceso.levantamiento.acceso_grua %}checked{% endif %}> Grúa</div>
+                        </div>
+                    </div>
+                    <textarea name="acc_restricciones" class="form-control form-control-sm mt-2" placeholder="Restricciones..." rows="2">{{ proceso.levantamiento.restricciones_acceso }}</textarea>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-3 border rounded bg-white h-100 border-primary">
+                    <p class="fw-bold mb-2 border-bottom pb-1 text-primary small uppercase"><i class="bi bi-arrows-fullscreen"></i> Medidas Generales (cm)</p>
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+    <label class="x-small fw-bold">Ancho:</label>
+    <input type="number" step="any" inputmode="decimal" name="medida_ancho" class="form-control form-control-sm" 
+           value="{{ levantamiento.ancho|stringformat:'s' }}">
+</div>
+<div class="col-4">
+    <label class="x-small fw-bold">Alto:</label>
+    <input type="number" step="any" inputmode="decimal" name="medida_alto" class="form-control form-control-sm" 
+           value="{{ levantamiento.alto|stringformat:'s' }}">
+</div>
+<div class="col-4">
+    <label class="x-small fw-bold">Prof.:</label>
+    <input type="number" step="any" inputmode="decimal" name="medida_profundidad"  class="form-control form-control-sm" 
+           value="{{ levantamiento.profundidad_letrero|stringformat:'s' }}">
+</div>
+                    </div>
+                    
+                    <div class="p-2 border rounded bg-warning-subtle border-warning">
+                        <label class="fw-bold small text-dark d-block mb-1">Sistema Eléctrico:</label>
+                        <div class="form-check small"><input class="form-check-input" type="checkbox" name="elec_punto" {% if proceso.levantamiento.punto_cercano %}checked{% endif %}> Punto cercano SÍ</div>
+                        <div class="form-check small"><input class="form-check-input" type="checkbox" name="elec_tablero" {% if proceso.levantamiento.tablero_accesible %}checked{% endif %}> Tablero accesible SÍ</div>
+                        <input type="text" name="elec_voltaje" class="form-control form-control-sm mt-1" placeholder="Voltaje (V)" value="{{ proceso.levantamiento.voltaje }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-3 border rounded bg-light h-100">
+                    <p class="fw-bold mb-2 border-bottom pb-1 text-secondary small uppercase"><i class="bi bi-layers"></i> Superficie Soporte</p>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6 form-check small"><input class="form-check-input" type="checkbox" name="sup_muro" {% if proceso.levantamiento.soporte_muro %}checked{% endif %}> Muro</div>
+                        <div class="col-6 form-check small"><input class="form-check-input" type="checkbox" name="sup_metal" {% if proceso.levantamiento.soporte_metal %}checked{% endif %}> Metal</div>
+                        <div class="col-6 form-check small"><input class="form-check-input" type="checkbox" name="sup_panel" {% if proceso.levantamiento.soporte_panel_compuesto %}checked{% endif %}> Panel Comp.</div>
+                        <div class="col-6 form-check small"><input class="form-check-input" type="checkbox" name="sup_vidrio" {% if proceso.levantamiento.soporte_vidrio %}checked{% endif %}> Vidrio</div>
+                    </div>
+                    <input type="text" name="sup_otro" class="form-control form-control-sm" placeholder="Otro soporte..." value="{{ proceso.levantamiento.soporte_otro }}">
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-3 border rounded border-primary-subtle bg-white h-100">
+                    <p class="fw-bold mb-2 border-bottom pb-1 text-primary small uppercase"><i class="bi bi-box-seam"></i> Fabricación</p>
+                    
+                    <div class="mb-3">
+                        <label class="fw-bold x-small text-secondary text-uppercase d-block mb-1">Material:</label>
+                        <div class="row g-0 small">
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="mat_pvc" {% if proceso.levantamiento.mat_pvc %}checked{% endif %}> PVC Normal</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="mat_pvc_lum" {% if proceso.levantamiento.mat_pvc_lum %}checked{% endif %}> PVC Lum.</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="mat_acrilico" {% if proceso.levantamiento.mat_acrilico %}checked{% endif %}> Acrílico</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="mat_adh_nor" {% if proceso.levantamiento.mat_adh_nor %}checked{% endif %}> Adh. Normal</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="mat_adh_trans" {% if proceso.levantamiento.mat_adh_trans %}checked{% endif %}> Adh. Trans.</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="fw-bold x-small text-secondary text-uppercase d-block mb-1">Terminación:</label>
+                        <div class="row g-0 small">
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="term_ojetillos" {% if proceso.levantamiento.term_ojetillos %}checked{% endif %}> Ojetillos</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="term_bolsillo" {% if proceso.levantamiento.term_bolsillo %}checked{% endif %}> Bolsillo</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="term_tubo" {% if proceso.levantamiento.term_tubo %}checked{% endif %}> Tubo</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="term_bastidor" {% if proceso.levantamiento.term_bastidor %}checked{% endif %}> Bastidor</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="term_laminado" {% if proceso.levantamiento.term_laminado %}checked{% endif %}> Laminado</div>
+                            <div class="col-6 form-check"><input class="form-check-input" type="checkbox" name="term_troquel" {% if proceso.levantamiento.term_troquel %}checked{% endif %}> Troquel</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12">
+    <div class="p-3 border rounded bg-danger bg-opacity-10 border-danger h-100">
+        <p class="fw-bold mb-2 border-bottom border-danger pb-1 text-danger small uppercase">
+            <i class="bi bi-exclamation-triangle-fill"></i> Evaluación de Riesgos y Seguridad
+        </p>
+        <div class="row g-3">
+            <div class="col-md-8">
+                <div class="d-flex flex-wrap gap-3">
+                    <div class="form-check small">
+                        <input class="form-check-input" type="checkbox" name="r_altura" id="r_altura" {% if proceso.levantamiento.riesgo_altura %}checked{% endif %}>
+                        <label class="form-check-label fw-bold" for="r_altura">Riesgo Altura</label>
+                    </div>
+                    <div class="form-check small">
+                        <input class="form-check-input" type="checkbox" name="r_transito" id="r_transito" {% if proceso.levantamiento.riesgo_transito %}checked{% endif %}>
+                        <label class="form-check-label fw-bold" for="r_transito">Riesgo Tránsito</label>
+                    </div>
+                    <div class="form-check small">
+                        <input class="form-check-input" type="checkbox" name="r_permiso" id="r_permiso" {% if proceso.levantamiento.riesgo_permiso %}checked{% endif %}>
+                        <label class="form-check-label fw-bold" for="r_permiso">Requiere Permiso</label>
+                    </div>
+                    <div class="form-check small">
+                        <input class="form-check-input" type="checkbox" name="r_energia" id="r_energia" {% if proceso.levantamiento.riesgo_energia %}checked{% endif %}>
+                        <label class="form-check-label fw-bold" for="r_energia">Riesgo Energía</label>
+                    </div>
+                </div>
             </div>
             
-            <div class="col-md-5 ps-4">
-                <div class="form-check mt-2">
-                    <input type="checkbox" 
-                           name="{{ form.aprobacion_taller.name }}" 
-                           id="{{ form.aprobacion_taller.id_for_label }}"
-                           class="form-check-input"
-                           {% if form.aprobacion_taller.value %}checked{% endif %}>
-                    
-                    <label class="form-check-label fw-bold text-success ms-2" 
-                           for="{{ form.aprobacion_taller.id_for_label }}">
-                        APROBACIÓN FINAL
-                    </label>
+            <div class="col-md-4">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-danger text-white border-danger small"><i class="bi bi-clock-history"></i></span>
+                    <input type="text" name="r_tiempo_estimado" class="form-control border-danger form-control-sm" 
+                           placeholder="Tiempo est. instalación (ej: 4 horas)" 
+                           value="{{ proceso.levantamiento.tiempo_estimado_instalacion }}">
                 </div>
             </div>
         </div>
     </div>
 </div>
+    </div>
+</div>
+
+                            <div class="p-4 rounded-4 bg-white border shadow-sm">
+                                <h6 class="fw-bold text-secondary mb-3 tech-title small uppercase">
+                                    <i class="bi bi-chat-dots me-2"></i>Reporte de Taller y Calidad
+                                </h6>
+                                <div class="row mt-3">
+                                    <div class="col-md-7 border-end">
+                                        {{ form.terminaciones|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-5 ps-4 d-flex align-items-center">
+                                        <div class="form-check p-3 rounded bg-success bg-opacity-10 border border-success border-opacity-25 w-100">
+                                            <input type="checkbox" name="{{ form.aprobacion_taller.name }}" id="{{ form.aprobacion_taller.id_for_label }}" class="form-check-input" {% if form.aprobacion_taller.value %}checked{% endif %}>
+                                            <label class="form-check-label fw-bold text-success ms-2" for="{{ form.aprobacion_taller.id_for_label }}">
+                                                APROBACIÓN FINAL
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="d-flex justify-content-end gap-3 mt-5">
                         <a href="{% url 'dashboard_taller' %}" class="btn btn-light px-4 border">Volver</a>
-                        <button type="submit" class="btn btn-primary btn-tech px-5 shadow" id="btnSubmit">
+                        <button type="submit" class="btn btn-primary btn-tech px-5 shadow">
                             <i class="bi bi-arrow-repeat me-2"></i>GUARDAR CAMBIOS
                         </button>
                     </div>
@@ -107,42 +316,157 @@
     </div>
 </div>
 
-<style>
-    .tech-title { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
-    
-    /* Solo cambiamos el color de fondo para indicar que ya estaba marcado, 
-       pero sin bloquear el clic */
-    .already-checked {
-        background-color: rgba(0, 0, 0, 0.05) !important;
-        border: 1px dashed #adb5bd;
-    }
-
-    .form-check {
-        transition: all 0.2s ease;
-        cursor: pointer;
-    }
-
-    .form-check:hover {
-        background-color: rgba(0, 0, 0, 0.1) !important;
-    }
-
-    /* Eliminamos la parte que decía pointer-events: none */
-    .btn-tech { font-family: 'Orbitron', sans-serif; font-size: 0.9rem; }
-</style>
-
 <script>
+    let listaEdicionTaller = [];
+
+    // Definimos las piezas por categoría
+    const catalogoPiezas = {
+        'CAMIONETA': [
+            'Puerta Chofer Del.', 'Puerta Chofer Tras.', 'Puerta Copiloto Del.', 
+            'Puerta Copiloto Tras.',  'Lateral Zona Carga', 'Portalón', 
+            'Lateral Completo', 'Atrás (Medida Total)'
+        ],
+        'FURGÓN': [
+            'Puerta Chofer', 'Puerta corredera copiloto', 'Lateral completo chof', 'Ventanal puerta corrediza',
+            'Puerta copiloto', 'Lado ventana zona carga', 'lateral completo cop', 'atras completo',
+            'Ventanal completo', 'Puertas divididas', 'Lado patente', 'Lado logo vehiculo'
+        ],
+        'CAMIÓN': [
+            'Puerta Chofer', 'Lateral Zona Carga (X2)' , 'Portalón'
+        ]
+    };
+
     document.addEventListener("DOMContentLoaded", function() {
+        const rawData = '{{ proceso.mediciones_taller_json|safe }}';
+        try {
+            // Cargamos los datos iniciales que ya tiene el modelo
+            listaEdicionTaller = JSON.parse(rawData || "[]");
+            renderizarEdicionTaller();
+        } catch (e) { 
+            console.error("Error al parsear JSON inicial:", e);
+            listaEdicionTaller = [];
+        }
+
+        // --- ESTO ES LO QUE FALTABA ---
+        // Buscamos el formulario por su ID y forzamos la sincronización antes de enviar
         const form = document.getElementById('editForm');
-        
-        // Esta función se asegura de que los campos 'disabled' (como el Cliente)
-        // se habiliten UN SEGUNDO antes de enviar para que Django no de error.
-        form.onsubmit = function() {
-            const disabledFields = form.querySelectorAll('[disabled]');
-            disabledFields.forEach(field => {
-                field.disabled = false;
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                sincronizarJSON(); 
+                // Opcional: console.log("Enviando estos datos:", document.getElementById('input_json_taller_edit').value);
             });
-            return true;
-        };
+        }
     });
+
+    function mostrarOpciones(categoria) {
+        const contenedor = document.getElementById('selector-piezas-dinamico');
+        const listaBotones = document.getElementById('lista-botones-piezas');
+        const titulo = document.getElementById('titulo-tipo-vehiculo');
+
+        titulo.innerText = `Piezas disponibles para: ${categoria}`;
+        listaBotones.innerHTML = ""; 
+
+        catalogoPiezas[categoria].forEach(pieza => {
+            listaBotones.innerHTML += `
+                <button type="button" class="btn btn-outline-primary btn-sm fw-bold" 
+                        onclick="agregarPiezaFinal('${categoria}', '${pieza}')">
+                    + ${pieza}
+                </button>`;
+        });
+
+        contenedor.classList.remove('d-none');
+        contenedor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function agregarPiezaFinal(categoria, nombrePieza) {
+        const nuevaPieza = {
+            nombre: nombrePieza,
+            categoria: categoria,
+            medida: "0 x 0"
+        };
+
+        listaEdicionTaller.push(nuevaPieza);
+        renderizarEdicionTaller();
+
+        setTimeout(() => {
+            const inputs = document.querySelectorAll('#tabla_edicion_taller input');
+            if(inputs.length > 0) inputs[inputs.length - 2].focus(); 
+        }, 100);
+    }
+
+    function renderizarEdicionTaller() {
+    const tbody = document.getElementById('tabla_edicion_taller');
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    listaEdicionTaller.forEach((item, index) => {
+        let [ancho, alto] = (item.medida || "0 x 0").split(' x ');
+
+        let nombreCompleto = item.nombre;
+        if (item.categoria && !item.nombre.includes(':')) {
+            nombreCompleto = `${item.categoria}: ${item.nombre}`;
+        }
+
+        tbody.innerHTML += `
+            <tr class="align-middle border-bottom" style="height: 45px;">
+                <td class="text-start" style="width: 45%; padding-left: 10px;">
+                    <span style="font-size: 0.75rem; color: #444; font-weight: 600; text-transform: uppercase; letter-spacing: 0.2px;">
+                        ${nombreCompleto}
+                    </span>
+                </td>
+
+                <td style="width: 45%;">
+                    <div class="input-group input-group-sm mx-auto shadow-sm" 
+                         style="border: 1.5px solid #ffb100; border-radius: 4px; overflow: hidden; background: #fff; max-width: 180px;">
+                        
+                        <input type="number" step="0.1" 
+                               class="form-control text-center border-0 p-0" 
+                               value="${ancho}"
+                               oninput="actualizarDatoTaller(${index}, 'ancho', this.value)" 
+                               style="font-size: 0.9rem; color: #000; height: 28px; font-weight: 700;">
+                        
+                        <span class="input-group-text bg-white border-0 text-muted px-1" style="font-size: 0.7rem;">x</span>
+                        
+                        <input type="number" step="0.1" 
+                               class="form-control text-center border-0 p-0" 
+                               value="${alto}"
+                               oninput="actualizarDatoTaller(${index}, 'alto', this.value)" 
+                               style="font-size: 0.9rem; color: #000; height: 28px; font-weight: 700;">
+                        
+                        <span class="input-group-text bg-light border-0 text-muted px-2" 
+                              style="font-size: 0.65rem; border-left: 1px solid #eee !important;">cm</span>
+                    </div>
+                </td>
+
+                <td class="text-end" style="width: 10%; padding-right: 10px;">
+                    <button type="button" class="btn btn-link text-danger p-0" 
+                            onclick="eliminarFilaTaller(${index})" style="text-decoration: none;">
+                        <i class="bi bi-trash3-fill" style="font-size: 0.95rem;"></i>
+                    </button>
+                </td>
+            </tr>`;
+    });
+    sincronizarJSON();
+}
+
+    function actualizarDatoTaller(index, tipo, valor) {
+        let [ancho, alto] = (listaEdicionTaller[index].medida || "0 x 0").split(' x ');
+        if (tipo === 'ancho') ancho = valor || 0;
+        if (tipo === 'alto') alto = valor || 0;
+        listaEdicionTaller[index].medida = `${ancho} x ${alto}`;
+        sincronizarJSON(); 
+    }
+
+    function eliminarFilaTaller(index) {
+        listaEdicionTaller.splice(index, 1);
+        renderizarEdicionTaller();
+    }
+
+    function sincronizarJSON() {
+        const input = document.getElementById('input_json_taller_edit');
+        if (input) {
+            input.value = JSON.stringify(listaEdicionTaller);
+        }
+    }
 </script>
 {% endblock %}

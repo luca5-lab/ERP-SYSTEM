@@ -3,35 +3,243 @@
 
 {% block content %}
 <div class="container py-5">
-    <div class="card border-0 shadow-lg" style="border-radius: 20px;">
-        <div class="card-header bg-dark text-white p-4" style="border-radius: 20px 20px 0 0;">
-            <h4 class="tech-title mb-0">EDITAR AVANCE: {{ proceso.cliente.razon_social }}</h4>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="tech-title text-white mb-0">EDITAR AVANCE</h2>
+            <p class="text-white-50">Cliente: {{ proceso.cliente.razon_social }} | Proyecto #{{ proceso.id }}</p>
         </div>
-        <div class="card-body p-5">
-            <form method="POST">
-                {% csrf_token %}
-                <div class="row">
-                    <div class="col-md-6 border-end">
-                         <h6 class="fw-bold text-info mb-3 tech-title small">DISEÑO:</h6>
-                         {{ form.reunion|as_crispy_field }}
-                         {{ form.pauta|as_crispy_field }}
-                         {{ form.enviado_correccion|as_crispy_field }}
-                    </div>
-                    <div class="col-md-6 ps-4">
-                         <h6 class="fw-bold text-warning mb-3 tech-title small">CORRECCIÓN:</h6>
-                         {{ form.correccion_1|as_crispy_field }}
-                         {{ form.correccion_2|as_crispy_field }}
-                         {{ form.correccion_3|as_crispy_field }}
-                         <hr>
-                         {{ form.aprobacion_final|as_crispy_field }}
-                    </div>
+        <a href="{% url 'dashboard_diseno' %}" class="btn btn-outline-light btn-sm px-3">
+            <i class="bi bi-arrow-left"></i> VOLVER AL PANEL
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-lg h-100" style="border-radius: 20px;">
+                <div class="card-header bg-dark text-white p-4" style="border-radius: 20px 20px 0 0;">
+                    <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Controles de Diseño</h5>
                 </div>
-                <div class="text-end mt-4">
-                    <a href="{% url 'dashboard_diseno' %}" class="btn btn-secondary px-4">CANCELAR</a>
-                    <button type="submit" class="btn btn-primary px-4">GUARDAR CAMBIOS</button>
+                <div class="card-body p-4">
+                    <form method="POST" enctype="multipart/form-data" id="formProceso">
+                        {% csrf_token %}
+                        
+                        <input type="hidden" name="mediciones_json" id="id_mediciones_json" value='{{ proceso.mediciones_json|safe }}'>
+
+                        <div class="row">
+                            <div class="col-md-6 border-end">
+                                 <h6 class="fw-bold text-info mb-3 tech-title small text-uppercase">Estado de Diseño</h6>
+                                 {{ form.reunion|as_crispy_field }}
+                                 {{ form.pauta|as_crispy_field }}
+                                 {{ form.enviado_correccion|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 ps-md-4">
+                                 <h6 class="fw-bold text-warning mb-3 tech-title small text-uppercase">Correcciones</h6>
+                                 {{ form.correccion_1|as_crispy_field }}
+                                 {{ form.correccion_2|as_crispy_field }}
+                                 {{ form.correccion_3|as_crispy_field }}
+                                 <hr>
+                                 <h6 class="fw-bold text-success mb-3 tech-title small text-uppercase">Finalización</h6>
+                                 {{ form.aprobacion_final|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        <div class="mt-4 p-3 bg-light rounded-3 border">
+                            <label class="fw-bold small mb-2 text-primary text-uppercase">Subir Respaldos (PDF, PNG, JPG):</label>
+                            <div class="input-group input-group-sm">
+                                <input type="file" name="archivos_nuevos" class="form-control" multiple accept=".pdf, .png, .jpg, .jpeg">
+                            </div>
+                            
+                            {% if proceso.archivos.all %}
+                                <div class="mt-3">
+                                    <h6 class="fw-bold x-small text-secondary text-uppercase" style="font-size: 0.7rem;">Archivos subidos anteriormente:</h6>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% for item in proceso.archivos.all %}
+                                            <a href="{{ item.archivo.url }}" target="_blank" class="badge bg-white text-dark border text-decoration-none p-2 shadow-sm">
+                                                <i class="bi bi-file-earmark-pdf text-danger"></i> {{ item.archivo.name|slice:"13:"|truncatechars:20 }}
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="text-end mt-4 pt-3 border-top">
+                            <button type="submit" class="btn btn-primary btn-lg px-5 shadow">GUARDAR CAMBIOS</button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-lg mb-4" style="border-radius: 20px; background: #f8f9fa;">
+                <div class="card-header bg-danger text-white p-4" style="border-radius: 20px 20px 0 0;">
+                    <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-rulers me-2"></i>Medidas</span>
+                        <button type="button" class="btn btn-sm btn-light fw-bold" onclick="agregarFila()">
+                            <i class="bi bi-plus-lg"></i> AGREGAR
+                        </button>
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-muted small text-uppercase mb-3">Ajustar dimensiones:</h6>
+                    
+                    <div class="table-responsive rounded-3 border bg-white shadow-sm mb-4">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr style="font-size: 0.7rem;">
+                                    <th>TITULO</th>
+                                    <th width="75">ANCHO</th>
+                                    <th width="75">LARGO</th>
+                                    <th width="60" class="text-center">CANT.</th>
+                                    <th width="40"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoMediciones" style="font-size: 0.8rem;">
+                                </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6 class="fw-bold text-muted small text-uppercase mb-1">Observaciones:</h6>
+                        <div class="p-3 bg-white rounded border small" style="background-color: #fff3cd !important; border-color: #ffeeba !important;">
+                            {{ proceso.observaciones_terreno|default:"Sin instrucciones adicionales de terreno." }}
+                        </div>
+                    </div>
+
+                    {% if proceso.fotos_terreno.all %}
+                        <h6 class="fw-bold text-muted small text-uppercase mb-2">Fotos de Referencia:</h6>
+                        <div class="row g-2">
+    {% for foto in proceso.fotos_terreno.all %}
+    <div class="col-4">
+        <a href="{{ foto.imagen.url }}" target="_blank" class="text-decoration-none">
+            {% if ".pdf" in foto.imagen.url|lower %}
+                <div class="d-flex flex-column align-items-center justify-content-center rounded border bg-white shadow-sm" 
+                     style="height: 80px; width: 100%; border: 1px solid #dee2e6 !important;">
+                    <i class="bi bi-file-earmark-pdf-fill text-danger" style="font-size: 1.5rem;"></i>
+                    <span style="font-size: 0.55rem; font-weight: bold;" class="text-danger uppercase">VER PDF</span>
+                </div>
+            {% else %}
+                <img src="{{ foto.imagen.url }}" 
+                     class="img-fluid rounded border shadow-sm" 
+                     style="height: 80px; width: 100%; object-fit: cover;"
+                     alt="Foto de terreno">
+            {% endif %}
+        </a>
+    </div>
+    {% endfor %}
+</div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
+
+    <script>
+        // Función para inicializar todo
+        function iniciarEditorMediciones() {
+            const campoJson = document.getElementById('id_mediciones_json');
+            const cuerpo = document.getElementById('cuerpoMediciones');
+            
+            if (!campoJson || !cuerpo) {
+                console.error("No se encontraron los elementos del DOM");
+                return;
+            }
+
+            let mediciones = [];
+            
+            try {
+                // El filtro |safe es vital aquí. 
+                // Usamos JSON.parse con el valor del input.
+                const rawData = campoJson.value.trim();
+                mediciones = JSON.parse(rawData || "[]");
+            } catch (e) {
+                console.error("Error al parsear JSON:", e);
+                mediciones = [];
+            }
+
+            // Definimos las funciones en el scope global para que los botones funcionen
+            window.actualizarDato = function(index, campo, valor) {
+                mediciones[index][campo] = valor;
+                campoJson.value = JSON.stringify(mediciones);
+            };
+
+            window.eliminarFila = function(index) {
+    // Usamos SweetAlert2 para la confirmación
+            Swal.fire({
+                title: '¿Eliminar fila?',
+                text: "Esta acción no se puede deshacer hasta guardar.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, borrar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Eliminamos el dato
+                    mediciones.splice(index, 1);
+                    renderizar();
+
+                    // Lanzamos el Toast de confirmación
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true,
+                    });
+
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Fila eliminada correctamente'
+                    });
+                }
+            });
+        };
+
+            window.agregarFila = function() {
+                mediciones.push({ descripcion: 'Nueva Medida', ancho: '0', largo: '0', cantidad: '1' });
+                render(); // Alias de renderizar
+            };
+
+            function renderizar() {
+                if (mediciones.length === 0) {
+                    cuerpo.innerHTML = `<tr><td colspan="5" class="text-center text-muted small py-3">No hay mediciones. Haz clic en AGREGAR.</td></tr>`;
+                } else {
+                    cuerpo.innerHTML = '';
+                    mediciones.forEach((med, index) => {
+                        cuerpo.innerHTML += `
+                            <tr class="align-middle">
+                                <td><input type="text" class="form-control form-control-sm border-0" value="${med.descripcion}" oninput="actualizarDato(${index}, 'descripcion', this.value)"></td>
+                                <td><input type="text" class="form-control form-control-sm border-0 fw-bold text-danger text-center" value="${med.ancho}" oninput="actualizarDato(${index}, 'ancho', this.value)"></td>
+                                <td><input type="text" class="form-control form-control-sm border-0 fw-bold text-danger text-center" value="${med.largo}" oninput="actualizarDato(${index}, 'largo', this.value)"></td>
+                                <td><input type="number" class="form-control form-control-sm border-0 text-center" value="${med.cantidad}" oninput="actualizarDato(${index}, 'cantidad', this.value)"></td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-link text-danger p-0" onclick="eliminarFila(${index})">
+                                        <i class="bi bi-x-circle-fill fs-5"></i>
+                                    </button>
+                                </td>
+                            </tr>`;
+                    });
+                }
+                campoJson.value = JSON.stringify(mediciones);
+            }
+
+            // Hacemos el render inicial
+            renderizar();
+            
+            // Re-vinculamos el botón de agregar que está fuera del scope
+            window.render = renderizar; 
+        }
+
+        // Ejecutar cuando el DOM esté totalmente cargado
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", iniciarEditorMediciones);
+        } else {
+            iniciarEditorMediciones();
+        }
+    </script>
 </div>
 {% endblock %}

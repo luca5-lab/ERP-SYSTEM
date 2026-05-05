@@ -52,51 +52,110 @@
         </form>
 
         <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-dark">
-                    <tr style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem;">
-                        <th class="ps-4">ID COTIZACIÓN</th>
-                        <th>FECHA INGRESO</th>
-                        <th>CLIENTE</th>
-                        <th>SERVICIO (DESCRIPCIÓN / DETALLE)</th>
-                        <th class="text-end">TOTAL NETO</th>
-                        <th class="text-center">ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody class="text-dark bg-white">
-                    {% for c in cotizaciones %}
-                    <tr>
-                        <td class="ps-4 fw-bold text-primary">#{{ c.id|stringformat:"05d" }}</td>
-                        <td>{{ c.fecha|date:"d/m/Y H:i" }}</td>
-                        <td>{{ c.cliente.razon_social }}</td>
-                        <td>
-                            <div class="fw-bold text-dark">{{ c.servicio.descripcion }}</div>
-                            <span class="badge bg-light text-dark border mt-1" style="font-weight: 500;">
-                                {{ c.cantidad_m2 }} m² x ${{ c.valor_unitario_m2|floatformat:0 }}
-                            </span>
-                        </td>
-                        <td class="text-end fw-bold text-success">
-                            ${{ c.total_neto|floatformat:0 }}
-                        </td>
-                        <td class="text-center">
-                            <a href="{% url 'generar_pdf_cotizacion_servicio' c.id %}" 
-                               class="btn btn-outline-info btn-sm rounded-pill border-0" 
-                               target="_blank" title="Descargar PDF">
-                                <i class="bi bi-file-earmark-pdf-fill fs-5"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center py-5 text-muted">
-                            <i class="bi bi-folder-x display-4 d-block mb-3"></i>
-                            No se encontraron cotizaciones de servicios registradas.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <table class="table table-hover align-middle">
+        <thead class="bg-light">
+            <tr class="text-muted small text-uppercase" style="letter-spacing: 0.5px;">
+                <th class="ps-4">ID Cotización</th>
+                <th>Fecha Ingreso</th>
+                <th>Cliente / RUT</th>
+                <th class="text-end">Total Neto</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white">
+            {% for c in cotizaciones %}
+            <tr>
+                <td class="ps-4 fw-bold text-primary">
+                    #{{ c.get_numero_formateado }}
+                </td>
+                
+                <td>{{ c.fecha|date:"d/m/Y H:i" }}</td>
+                
+                <td>
+                    <div class="d-flex flex-column">
+                        <span class="fw-bold text-dark">{{ c.cliente.razon_social }}</span>
+                        <small class="text-muted">{{ c.cliente.rut }}</small>
+                    </div>
+                </td>
+                
+                <td class="text-end fw-bold text-success">
+                    ${{ c.total_neto|floatformat:2 }}
+                </td>
+                
+                <td class="text-center">
+                    <div class="btn-group">
+    <a href="{% url 'generar_pdf_cotizacion_servicio' c.id %}" 
+       target="_blank" 
+       class="btn btn-sm btn-outline-danger shadow-sm" 
+       title="Ver PDF">
+        <i class="bi bi-file-pdf"></i>
+    </a>
+
+    <a href="{% url 'editar_cotizacion_servicio' c.id %}" 
+       class="btn btn-sm btn-outline-dark shadow-sm"
+       title="Editar">
+        <i class="bi bi-pencil"></i>
+    </a>
+
+    
+</div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center py-5 text-muted">
+                    <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>
+                    No se encontraron cotizaciones de servicios.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+        {% if cotizaciones.paginator.num_pages > 1 %}
+<div class="d-flex justify-content-center mt-4">
+<nav>
+<ul class="pagination pagination-sm">
+
+{% if cotizaciones.has_previous %}
+<li class="page-item">
+<a class="page-link"
+href="?page={{ cotizaciones.previous_page_number }}&id_cotizacion={{ request.GET.id_cotizacion }}&cliente={{ request.GET.cliente }}">
+<i class="bi bi-chevron-left"></i>
+</a>
+</li>
+{% endif %}
+
+{% for num in cotizaciones.paginator.page_range %}
+
+{% if cotizaciones.number == num %}
+<li class="page-item active">
+<span class="page-link">{{ num }}</span>
+</li>
+{% else %}
+<li class="page-item">
+<a class="page-link"
+href="?page={{ num }}&id_cotizacion={{ request.GET.id_cotizacion }}&cliente={{ request.GET.cliente }}">
+{{ num }}
+</a>
+</li>
+{% endif %}
+
+{% endfor %}
+
+{% if cotizaciones.has_next %}
+<li class="page-item">
+<a class="page-link"
+href="?page={{ cotizaciones.next_page_number }}&id_cotizacion={{ request.GET.id_cotizacion }}&cliente={{ request.GET.cliente }}">
+<i class="bi bi-chevron-right"></i>
+</a>
+</li>
+{% endif %}
+
+</ul>
+</nav>
+</div>
+{% endif %}
     </div>
 </div>
 
@@ -124,4 +183,43 @@
         border-color: #0d6efd;
     }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// Configuración base del Toast
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 4000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Lógica para mensajes de Django (Backend)
+    {% if messages %}
+        {% for message in messages %}
+            Toast.fire({
+                icon: "{% if message.tags == 'error' %}error{% else %}success{% endif %}",
+                title: "{{ message|escapejs }}"
+            });
+        {% endfor %}
+    {% endif %}
+
+    // 2. Lógica para redirección de JS (Frontend - Tu edición de servicios)
+    if (localStorage.getItem('registro_exitoso') === 'true') {
+        Toast.fire({
+            icon: 'success',
+            title: 'Cotización guardada correctamente'
+        });
+        // Limpiamos la marca para que no se repita
+        localStorage.removeItem('registro_exitoso');
+    }
+});
+
+
+</script>
 {% endblock %}

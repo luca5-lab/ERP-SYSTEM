@@ -3,142 +3,322 @@
 {% load l10n %} 
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <div class="mb-4">
         <h1 class="tech-title h2 text-white mb-1">Nueva Cotización de Servicio</h1>
-        <p class="text-white-50">Cálculo de mano de obra y materiales por metro cuadrado</p>
+        <p class="text-white-50">Cálculo multilineal de servicios, mano de obra y materiales.</p>
     </div>
 
-    <form method="post" id="cotizadorForm">
-        {% csrf_token %}
-        <div class="row">
-            <div class="col-lg-8">
-                <div class="card dashboard-card border-0 shadow-lg p-4 mb-4">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold text-dark">Cliente</label>
-                            <select class="form-select shadow-sm" id="cliente" name="cliente" required>
-                                <option value="">Seleccione un cliente...</option>
-                                {% for cliente in clientes %}
-                                <option value="{{ cliente.id }}">{{ cliente.razon_social }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold text-dark">Servicio Técnico</label>
-                            <select class="form-select shadow-sm" id="servicio" name="servicio" required onchange="actualizarCalculo()">
-                                <option value="0" data-precio="0">Seleccione un servicio...</option>
-                                {% for servicio in servicios %}
-                                <option value="{{ servicio.id }}" data-precio="{{ servicio.costo_m2|unlocalize|floatformat:0 }}">
-                                    {{ servicio.codigo }} - {{ servicio.descripcion|truncatechars:30 }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold text-dark">Cantidad (Metros Cuadrados m²)</label>
-                            <div class="input-group shadow-sm">
-                                <span class="input-group-text bg-primary text-white"><i class="bi bi-rulers"></i></span>
-                                <input type="number" id="cantidad" name="cantidad" class="form-control" step="0.01" value="1" min="0.1" oninput="actualizarCalculo()">
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold text-dark">Precio unitario por m²</label>
-                            <div class="input-group shadow-sm">
-                                <span class="input-group-text bg-light">$</span>
-                                <input type="text" id="precio_unitario" class="form-control bg-white" readonly value="0">
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card dashboard-card border-0 shadow-lg p-4 mb-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-tools me-2 text-primary"></i>Añadir Servicio</h5>
                 
-                <div class="card dashboard-card border-0 shadow-lg p-4">
-                    <h5 class="tech-title mb-3" style="font-size: 1rem;">Resumen del Cálculo</h5>
-                    <div class="table-responsive">
-                        <table class="table align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Detalle</th>
-                                    <th class="text-center">Cantidad</th>
-                                    <th class="text-end">Subtotal Neto</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td id="resumen-nombre">No seleccionado</td>
-                                    <td class="text-center"><span id="resumen-cant">0</span> m²</td>
-                                    <td class="text-end fw-bold text-primary" id="resumen-subtotal">$ 0</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Seleccionar Servicio</label>
+                    <select id="selectServicio" class="form-select shadow-sm border-2" onchange="cargarPrecioBase()">
+                        <option value="" data-precio="0">-- Buscar Servicio --</option>
+                        {% for s in servicios %}
+    <option value="{{ s.id }}" data-precio="{{ s.precio_venta|unlocalize }}" data-codigo="{{ s.codigo }}">
+        {{ s.descripcion|truncatechars:30 }} - (${{ s.precio_venta|intcomma }})
+    </option>
+{% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Cantidad </label>
+                    <input type="number" id="inputCantidad" class="form-control shadow-sm" value="1" min="0.1" step="0.1">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase text-primary">Valor (Ajustable)</label>
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-primary text-white border-0">$</span>
+                        <input type="text" id="inputPrecio" inputmode="decimal" class="form-control border-2" placeholder="0">
                     </div>
                 </div>
-            </div>
 
-            <div class="col-lg-4">
-                <div class="card bg-primary text-white border-0 shadow-lg p-4 text-center">
-                    <h4 class="tech-title mb-4" style="font-size: 1.2rem;">TOTAL COTIZACIÓN</h4>
-                    <div class="display-5 fw-bold mb-2" id="total-final">$ 0</div>
-                    <p class="small opacity-75">Valores netos sujetos a IVA (19%)</p>
-                    <hr>
-                    <button type="submit" class="btn btn-light btn-lg w-100 rounded-pill fw-bold text-primary shadow">
-                        <i class="bi bi-file-earmark-pdf-fill me-2"></i> GUARDAR Y GENERAR
+                <button type="button" onclick="agregarServicioALista()" class="btn btn-primary w-100 rounded-pill shadow-sm fw-bold mt-2">
+                    <i class="bi bi-plus-lg me-2"></i> AGREGAR A LA LISTA
+                </button>
+            </div>
+            
+            <div class="card dashboard-card border-0 shadow-lg p-4">
+                <label class="form-label small fw-bold text-muted text-uppercase">Cliente Destinatario</label>
+                <select id="clienteCotizacion" class="form-select shadow-sm border-2">
+                    <option value="">Seleccione un cliente...</option>
+                    {% for c in clientes %}
+                    <option value="{{ c.id }}">{{ c.razon_social }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card dashboard-card border-0 shadow-lg p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Código</th>
+                                <th>Servicio</th>
+                                <th class="text-center">Cant </th>
+                                <th class="text-end">Precio </th>
+                                <th class="text-end">Subtotal</th>
+                                <th class="text-center"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="detalleCotizacion">
+                            </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 p-4 bg-light rounded-4 border border-white shadow-sm">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Subtotal Neto:</span>
+                        <span id="labelNeto" class="fw-bold fs-5">$ 0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">IVA (19%):</span>
+                        <span id="labelIva" class="fw-bold fs-5">$ 0</span>
+                    </div>
+                    <hr class="my-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h3 tech-title text-primary mb-0">TOTAL:</span>
+                        <span id="labelTotal" class="h3 fw-bold text-primary mb-0">$ 0</span>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button class="btn btn-success flex-grow-1 rounded-pill shadow fw-bold py-2" onclick="finalizarCotizacionServicio()">
+                        <i class="bi bi-check-circle me-2"></i> FINALIZAR Y GENERAR
                     </button>
-                    <a href="{% url 'menu_cotizaciones' %}" class="btn btn-outline-light w-100 rounded-pill mt-3 border-0">
+                    <a href="{% url 'lista_cotizaciones_servicios' %}" class="btn btn-outline-secondary rounded-pill px-4">
                         Cancelar
                     </a>
                 </div>
             </div>
         </div>
-    </form>
+    </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-function actualizarCalculo() {
-    const select = document.getElementById('servicio');
-    const inputCant = document.getElementById('cantidad');
-    const precioUnitInput = document.getElementById('precio_unitario');
-    const resNombre = document.getElementById('resumen-nombre');
-    const resCant = document.getElementById('resumen-cant');
-    const resSubtotal = document.getElementById('resumen-subtotal');
-    const totalFinal = document.getElementById('total-final');
+    let totalNetoGlobal = 0;
+    const formatter = new Intl.NumberFormat('es-CL', { 
+    style: 'currency', 
+    currency: 'CLP', 
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
 
-    const selectedOption = select.options[select.selectedIndex];
-    
-    // LIMPIEZA REFORZADA:
-    let precioRaw = selectedOption.getAttribute('data-precio') || "0";
-    
-    // Si Django manda "12000,00" o "12.000", esto lo deja como "12000"
-    let precioLimpio = precioRaw.toString()
-                        .split(',')[0]          // Ignora lo que esté después de la coma
-                        .replace(/\D/g, '');    // Elimina TODO lo que no sea un número (puntos, espacios, etc)
-                        
-    let precio = parseInt(precioLimpio) || 0;
-    let cantidad = parseFloat(inputCant.value) || 0;
+    // --- NUEVA LÓGICA DE CARGA PARA EDICIÓN ---
+    document.addEventListener('DOMContentLoaded', function() {
 
-    const formatter = new Intl.NumberFormat('es-CL', {
-        style: 'currency',
-        currency: 'CLP',
-        minimumFractionDigits: 0
+        {% if detalles_json %}
+            const serviciosGuardados = {{ detalles_json|safe }};
+            const tabla = document.getElementById('detalleCotizacion');
+            
+            serviciosGuardados.forEach(item => {
+                const fila = document.createElement('tr');
+                fila.setAttribute('data-id', item.id); 
+                fila.setAttribute('data-precio', item.precio);
+                fila.setAttribute('data-cantidad', item.cantidad);
+
+                fila.innerHTML = `
+                    <td class="small fw-bold text-muted">${item.codigo}</td>
+                    <td class="fw-semibold">${item.nombre}</td>
+                    <td class="text-center">${item.cantidad}</td>
+                    <td class="text-end">${formatter.format(item.precio)}</td>
+                    <td class="text-end fw-bold text-primary">${formatter.format(item.subtotal)}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-danger border-0" onclick="eliminarFila(this, ${item.subtotal})">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
+                    </td>
+                `;
+                tabla.appendChild(fila);
+                actualizarTotales(item.subtotal);
+            });
+
+            // Seleccionar cliente automáticamente
+            const selectCliente = document.getElementById('clienteCotizacion');
+            if (selectCliente) selectCliente.value = "{{ cotizacion.cliente.id }}";
+        {% endif %}
+
+        // ✅ INPUT PRECIO (AHORA DENTRO DE DOMCONTENTLOADED)
+        const inputPrecio = document.getElementById('inputPrecio');
+
+        if (inputPrecio) {
+            inputPrecio.addEventListener('blur', function () {
+                this.value = limpiarNumero(this.value);
+            });
+
+           inputPrecio.addEventListener('input', function (e) {
+                let val = e.target.value;
+
+                // solo permite números, punto y coma
+                val = val.replace(/[^0-9.,]/g, '');
+
+                e.target.value = val;
+            });
+        }
+
     });
 
-    let subtotal = Math.round(precio * cantidad);
+    function cargarPrecioBase() {
+    const select = document.getElementById('selectServicio');
+    const precioInput = document.getElementById('inputPrecio');
+    const option = select.options[select.selectedIndex];
 
-    precioUnitInput.value = formatter.format(precio);
-    resNombre.innerText = select.value === "0" ? "No seleccionado" : selectedOption.text;
-    resCant.innerText = cantidad;
-    resSubtotal.innerText = formatter.format(subtotal);
-    totalFinal.innerText = formatter.format(subtotal);
+    let precio = option.getAttribute('data-precio');
+
+    if (!precio) {
+        precioInput.value = "0.00";
+        return;
+    }
+
+    // convertir seguro a número (SIN romper miles)
+    const num = Number(String(precio).replace(',', '.'));
+
+    precioInput.value = isNaN(num) ? "0.00" : num.toFixed(2);
 }
-</script>
 
-<style>
-    .dashboard-card { border-radius: 15px !important; }
-    .input-group-text { border: none; }
-    .form-control, .form-select { border: 1px solid #dee2e6; }
-    .form-control:focus, .form-select:focus { border-color: #0d6efd; box-shadow: none; }
-</style>
+    function agregarServicioALista() {
+        const select = document.getElementById('selectServicio');
+        const cantInput = document.getElementById('inputCantidad');
+        const precioInput = document.getElementById('inputPrecio');
+        
+        if (!select.value || precioInput.value <= 0) {
+            return Swal.fire('Error', 'Selecciona un servicio y precio válido', 'error');
+        }
+
+        const option = select.options[select.selectedIndex];
+        const id = select.value;
+        const codigo = option.getAttribute('data-codigo') || 'SE-000';
+        const descripcion = option.text;
+        const cantidad = parseFloat(cantInput.value);
+        const precio = limpiarNumero(precioInput.value);
+        const subtotal = parseFloat((cantidad * precio).toFixed(2));
+
+        const tabla = document.getElementById('detalleCotizacion');
+        const fila = document.createElement('tr');
+        fila.setAttribute('data-id', id);
+        fila.setAttribute('data-precio', precio.toFixed(2));
+        fila.setAttribute('data-cantidad', cantidad);
+
+        fila.innerHTML = `
+            <td class="small fw-bold text-muted">${codigo}</td>
+            <td class="fw-semibold">${descripcion}</td>
+            <td class="text-center">${cantidad}</td>
+            <td class="text-end">${formatter.format(precio)}</td>
+            <td class="text-end fw-bold text-primary">${formatter.format(subtotal)}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-danger border-0" onclick="eliminarFila(this, ${subtotal})">
+                    <i class="bi bi-trash-fill"></i>
+                </button>
+            </td>
+        `;
+        
+        tabla.appendChild(fila);
+        actualizarTotales(subtotal);
+        
+        // Reset campos
+        select.value = "";
+        precioInput.value = "";
+    }
+
+    function eliminarFila(boton, monto) {
+        boton.closest('tr').remove();
+        actualizarTotales(-monto);
+    }
+
+    function limpiarNumero(valor) {
+    if (valor === null || valor === undefined) return 0;
+
+    let limpio = String(valor).trim();
+    limpio = limpio.replace(/\s/g, '');
+
+    // caso mixto 4.000,22 o 4,000.22
+    if (limpio.includes(',') && limpio.includes('.')) {
+        if (limpio.lastIndexOf(',') > limpio.lastIndexOf('.')) {
+            limpio = limpio.replace(/\./g, '').replace(',', '.');
+        } else {
+            limpio = limpio.replace(/,/g, '');
+        }
+    }
+    else if (limpio.includes(',')) {
+        limpio = limpio.replace(',', '.');
+    }
+
+    const num = Number(limpio);
+
+    if (isNaN(num)) return 0;
+
+    // 🔥 FIX CLAVE: mantener 2 decimales reales
+    return parseFloat(num.toFixed(2));
+}
+
+    function actualizarTotales(monto) {
+        totalNetoGlobal = parseFloat((totalNetoGlobal + monto).toFixed(2));
+        const iva = parseFloat((totalNetoGlobal * 0.19).toFixed(2));
+        document.getElementById('labelNeto').innerText = formatter.format(totalNetoGlobal);
+        document.getElementById('labelIva').innerText = formatter.format(iva);
+        document.getElementById('labelTotal').innerText = formatter.format(totalNetoGlobal + iva);
+    }
+
+    async function finalizarCotizacionServicio() {
+        const clienteId = document.getElementById('clienteCotizacion').value;
+        const filas = document.querySelectorAll('#detalleCotizacion tr');
+
+        if (!clienteId || filas.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Faltan datos',
+                text: 'Selecciona cliente y servicios',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+            return;
+        }
+
+        const items = Array.from(filas).map(f => ({
+            id: f.getAttribute('data-id'),
+            cantidad: f.getAttribute('data-cantidad'),
+            precio_unitario: f.getAttribute('data-precio')
+        }));
+
+        const editandoId = "{% if editando %}{{ cotizacion.id }}{% else %}null{% endif %}";
+
+        try {
+            const response = await fetch('{% url "guardar_cotizacion_servicio" %}', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'X-CSRFToken': '{{ csrf_token }}' 
+                },
+                body: JSON.stringify({ 
+                    cliente_id: clienteId, 
+                    items: items,
+                    cotizacion_id: editandoId !== "null" ? editandoId : null 
+                })
+            });
+
+            const res = await response.json();
+            
+            if(res.status === 'success') {
+                localStorage.setItem('registro_exitoso', 'true');
+                window.location.href = "{% url 'lista_cotizaciones_servicios' %}";
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: res.message, toast: true, position: 'top-end' });
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+</script>
 {% endblock %}

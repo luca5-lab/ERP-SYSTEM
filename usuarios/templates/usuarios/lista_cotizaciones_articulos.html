@@ -52,50 +52,110 @@
         </form>
 
         <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-dark">
-                    <tr style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem;">
-                        <th class="ps-4">N° PRESUPUESTO</th>
-                        <th>FECHA INGRESO</th>
-                        <th>CLIENTE</th>
-                        <th>ARTÍCULOS (ID - DESCRIPCIÓN)</th>
-                        <th class="text-center">ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody class="text-dark bg-white">
-                    {% for c in cotizaciones %}
-                    <tr>
-                        <td class="ps-4 fw-bold text-primary">#{{ c.n_presupuesto }}</td>
-                        <td>{{ c.fecha|date:"d/m/Y H:i" }}</td>
-                        <td>{{ c.cliente.razon_social }}</td>
-                        <td>
-                            {% for detalle in c.detalles.all %}
-                                <span class="badge bg-light text-dark border mb-1" style="font-weight: 500;">
-                                    ID:{{ detalle.articulo.id }} - {{ detalle.articulo.descripcion }}
-                                </span><br>
-                            {% empty %}
-                                <span class="text-muted small">Sin artículos</span>
-                            {% endfor %}
-                        </td>
-                        <td class="text-center">
-                            <a href="{% url 'generar_pdf_cotizacion' c.n_presupuesto %}" 
-                               class="btn btn-outline-info btn-sm rounded-pill border-0" 
-                               target="_blank" title="Descargar PDF">
-                                <i class="bi bi-file-earmark-pdf-fill fs-5"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
-                            <i class="bi bi-folder-x display-4 d-block mb-3"></i>
-                            No se encontraron cotizaciones registradas.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <table class="table table-hover align-middle">
+        <thead class="bg-light">
+            <tr class="text-muted small text-uppercase">
+                <th class="ps-4">ID Cotización</th>
+                <th>Fecha</th>
+                <th>Cliente / RUT</th>
+                <th>Total Neto</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cotizacion in cotizaciones %}
+            <tr>
+                <td class="ps-4 fw-bold text-primary">
+                    #{{ cotizacion.get_numero_formateado }}
+                </td>
+                
+                <td>{{ cotizacion.fecha|date:"d/m/Y H:i" }}</td>
+                
+                <td>
+                    <div class="d-flex flex-column">
+                        <span class="fw-bold">{{ cotizacion.cliente.razon_social }}</span>
+                        <small class="text-muted">{{ cotizacion.cliente.rut }}</small>
+                    </div>
+                </td>
+                
+                <td class="fw-bold text-success">
+                    ${{ cotizacion.total_final|floatformat:2 }}
+                </td>
+                
+                <td class="text-center">
+                    <div class="btn-group">
+                        <a href="{% url 'generar_pdf_cotizacion' cotizacion.n_presupuesto %}" 
+                           target="_blank" 
+                           class="btn btn-sm btn-outline-danger shadow-sm" 
+                           title="Ver PDF">
+                            <i class="bi bi-file-pdf"></i>
+                        </a>
+
+                        <a href="{% url 'editar_cotizacion_articulo' cotizacion.n_presupuesto %}" 
+                        class="btn btn-sm btn-outline-dark shadow-sm" 
+                        title="Editar Cotización">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+
+                        
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center py-5 text-muted">
+                    <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>
+                    No se encontraron cotizaciones.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+        {% if cotizaciones.paginator.num_pages > 1 %}
+<div class="d-flex justify-content-center mt-4">
+<nav>
+<ul class="pagination pagination-sm">
+
+{% if cotizaciones.has_previous %}
+<li class="page-item">
+<a class="page-link"
+href="?page={{ cotizaciones.previous_page_number }}&n_presupuesto={{ request.GET.n_presupuesto }}&cliente={{ request.GET.cliente }}">
+<i class="bi bi-chevron-left"></i>
+</a>
+</li>
+{% endif %}
+
+{% for num in cotizaciones.paginator.page_range %}
+
+{% if cotizaciones.number == num %}
+<li class="page-item active">
+<span class="page-link">{{ num }}</span>
+</li>
+{% else %}
+<li class="page-item">
+<a class="page-link"
+href="?page={{ num }}&n_presupuesto={{ request.GET.n_presupuesto }}&cliente={{ request.GET.cliente }}">
+{{ num }}
+</a>
+</li>
+{% endif %}
+
+{% endfor %}
+
+{% if cotizaciones.has_next %}
+<li class="page-item">
+<a class="page-link"
+href="?page={{ cotizaciones.next_page_number }}&n_presupuesto={{ request.GET.n_presupuesto }}&cliente={{ request.GET.cliente }}">
+<i class="bi bi-chevron-right"></i>
+</a>
+</li>
+{% endif %}
+
+</ul>
+</nav>
+</div>
+{% endif %}
     </div>
 </div>
 
@@ -123,4 +183,85 @@
         border-color: #0d6efd;
     }
 </style>
+<script>
+// 1. Configuración global de Toasts
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 4000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+    }
+});
+
+// 2. Capturar mensajes de Django (Messages Framework) y mostrarlos como Toasts
+document.addEventListener('DOMContentLoaded', function() {
+    {% if messages %}
+        {% for message in messages %}
+            Toast.fire({
+                icon: "{% if message.tags == 'error' %}error{% else %}success{% endif %}",
+                title: "{{ message|escapejs }}"
+            });
+        {% endfor %}
+    {% endif %}
+});
+
+// 3. Función para confirmar eliminación (CORREGIDA LA URL)
+function confirmarEliminacion(id, n_formateado) { // Cambié n_presupuesto por n_formateado para evitar confusión
+    Swal.fire({
+        title: '¿Eliminar cotización?',
+        text: `Estás a punto de borrar el presupuesto #${n_formateado}. Esta acción no se puede deshacer.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // CAMBIO AQUÍ: Agregué 'articulos/' a la ruta para que coincida con tu urls.py
+            window.location.href = "/usuarios/cotizaciones/articulos/eliminar/" + id + "/";
+        }
+    })
+}
+
+// 4. Tu bloque de carga de detalles (Mantenlo si lo necesitas para lógica interna)
+document.addEventListener('DOMContentLoaded', function() {
+    // Si existen detalles (viniendo de la vista de edición)
+    {% if detalles_json %}
+        const iniciales = {{ detalles_json|safe }};
+        const tabla = document.getElementById('detalleCotizacion');
+        
+        if (tabla) { // Agregué esta validación para que no tire error si no encuentra la tabla
+            iniciales.forEach(item => {
+                const fila = document.createElement('tr');
+                fila.setAttribute('data-id', item.id);
+                fila.setAttribute('data-precio', item.precio);
+                fila.setAttribute('data-cantidad', item.cantidad);
+
+                fila.innerHTML = `
+                    <td class="small fw-bold text-muted">${item.codigo}</td>
+                    <td class="fw-semibold">${item.descripcion}</td>
+                    <td class="text-center">${item.cantidad}</td>
+                    <td class="text-end">${formatter.format(item.precio)}</td>
+                    <td class="text-end fw-bold text-primary">${formatter.format(item.subtotal)}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-danger border-0" onclick="eliminarFila(this, ${item.subtotal})">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
+                    </td>
+                `;
+                tabla.appendChild(fila);
+                actualizarTotales(item.subtotal);
+            });
+            // Seleccionar automáticamente al cliente si es edición
+            const selectCliente = document.getElementById('clienteCotizacion');
+            if (selectCliente) selectCliente.value = "{{ cotizacion.cliente.id }}";
+        }
+    {% endif %}
+});
+</script>
 {% endblock %}

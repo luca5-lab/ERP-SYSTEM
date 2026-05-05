@@ -40,6 +40,7 @@
                                 <div class="col-md-4 custom-check">{{ form.microperf|as_crispy_field }}</div>
                                 <div class="col-md-4 custom-check">{{ form.sellado|as_crispy_field }}</div>
                                 <div class="col-md-4 custom-check">{{ form.tela_pvc|as_crispy_field }}</div>
+                                
                             </div>
                         </div>
                     </div>
@@ -82,7 +83,7 @@
                 <thead class="table-dark">
                     <tr class="tech-title" style="font-size: 0.75rem;">
                         <th class="ps-4">CLIENTE / FECHA</th>
-                        <th>MATERIALES</th>
+                        <th>TIPO</th><th>MATERIALES</th>
                         <th>OPERACIONES</th>
                         <th>OBSERVACIONES</th>
                         <th class="text-center">ACCIONES</th> </tr>
@@ -91,24 +92,53 @@
     {% for proceso in procesos %}
     <tr class="bg-white">
         <td class="ps-4">
-            <div class="fw-bold text-primary text-uppercase">{{ proceso.cliente.razon_social }}</div>
-            <div class="text-muted small">ORDEN-{{ proceso.id }} | {{ proceso.creado|date:"d/m/Y" }}</div>
-        </td>
+    <div class="fw-bold text-primary text-uppercase">{{ proceso.cliente.razon_social }}</div>
+    
+    {% if proceso.fecha_entrega %}
+    <div class="mt-1">
+        <span class="badge {% if proceso.esta_atrasado %}bg-danger animate-pulse{% else %}bg-dark{% endif %}" style="font-size: 0.7rem;">
+            <i class="bi bi-clock"></i> ENTREGA: {{ proceso.fecha_entrega|date:"d/m/Y" }}
+        </span>
+    </div>
+    {% endif %}
+
+    
+    <div class="text-muted small" style="font-size: 0.7rem;">
+        <i class="bi bi-person-badge"></i> Resp: {{ proceso.responsable_taller|default:"Sin asignar" }}
+    </div>
+</td>
+
         <td>
-            <div class="d-flex flex-wrap gap-1" style="max-width: 250px;">
-                {% if proceso.acrilico %}<span class="badge-tech badge-mat">Acrílico</span>{% endif %}
-                {% if proceso.sintra %}<span class="badge-tech badge-mat">Sintra</span>{% endif %}
-                {% if proceso.ojetillo %}<span class="badge-tech badge-mat">Ojetillo</span>{% endif %}
-                {% if proceso.ad_prom %}<span class="badge-tech badge-mat">AD Prom</span>{% endif %}
-                {% if proceso.ad_vehicular %}<span class="badge-tech badge-mat">AD Vehicular</span>{% endif %}
-                {% if proceso.empavonado %}<span class="badge-tech badge-mat">Empavonado</span>{% endif %}
-                {% if proceso.microperf %}<span class="badge-tech badge-mat">Microperf</span>{% endif %}
-                {% if proceso.sellado %}<span class="badge-tech badge-mat">Sellado</span>{% endif %}
-                {% if proceso.tela_pvc %}<span class="badge-tech badge-mat">Tela PVC</span>{% endif %}
+            <span class="badge bg-info text-dark fw-bold text-uppercase" style="font-size: 0.7rem;">
+                {{ proceso.get_familia_display }}
+            </span>
+        </td>
+
+        <td style="min-width: 200px;">
+    <div class="d-flex flex-wrap gap-1">
+        {% if proceso.acrilico %}<span class="badge-tech badge-mat">Acrílico</span>{% endif %}
+        {% if proceso.sintra %}<span class="badge-tech badge-mat">Sintra</span>{% endif %}
+        {% if proceso.ojetillo %}<span class="badge-tech badge-mat">Ojetillo</span>{% endif %}
+        {% if proceso.ad_prom %}<span class="badge-tech badge-mat">AD Prom</span>{% endif %}
+        {% if proceso.ad_vehicular %}<span class="badge-tech badge-mat">AD Vehicular</span>{% endif %}
+        {% if proceso.empavonado %}<span class="badge-tech badge-mat">Empavonado</span>{% endif %}
+        {% if proceso.microperf %}<span class="badge-tech badge-mat">Microperf</span>{% endif %}
+        {% if proceso.sellado %}<span class="badge-tech badge-mat">Sellado</span>{% endif %}
+        {% if proceso.tela_pvc %}<span class="badge-tech badge-mat">Tela PVC</span>{% endif %}
+
+        {% if proceso.otros_materiales %}
+            <div class="w-100 mt-1">
+                <span class="badge bg-warning text-dark border border-dark fw-bold shadow-sm animate-pulse" 
+                      style="font-size: 0.75rem; letter-spacing: 0.5px; border-width: 2px !important;">
+                    <i class="bi bi-exclamation-triangle-fill"></i> {{ proceso.otros_materiales|upper }}
+                </span>
             </div>
-        </td>
+        {% endif %}
+    </div>
+</td>
+
         <td>
-            {% if proceso.impresion %}<i class="bi bi- droplet-fill text-success"></i> <span class="text-success small fw-bold">IMPRESIÓN</span><br>{% endif %}
+            {% if proceso.impresion %}<i class="bi bi-droplet-fill text-success"></i> <span class="text-success small fw-bold">IMPRESIÓN</span><br>{% endif %}
             {% if proceso.corte %}<i class="bi bi-scissors text-info"></i> <span class="text-info small fw-bold">CORTE</span>{% endif %}
         </td>
         
@@ -126,26 +156,30 @@
 
         <td class="text-center">
             <div class="btn-group">
-                <a href="{% url 'editar_proceso' proceso.pk %}" class="btn btn-outline-primary btn-sm" title="Editar / Aprobar">
-                    <i class="bi bi-pencil-square fs-5"></i>
-                </a>
+    <a href="{% url 'editar_proceso' proceso.pk %}" class="btn btn-outline-primary btn-sm" title="Editar / Aprobar">
+        <i class="bi bi-pencil-square fs-5"></i>
+    </a>
 
-                {% if proceso.estado == 'taller' %}
-                    {% if proceso.aprobacion_taller %}
-                        <a href="{% url 'finalizar_taller' proceso.pk %}" class="btn btn-success btn-sm ms-2 shadow-sm fw-bold animate-fade-in" style="font-size: 0.7rem;">
-                            <i class="bi bi-send-check-fill"></i> ENVIAR A ADMIN
-                        </a>
-                    {% else %}
-                        <button class="btn btn-secondary btn-sm ms-2 opacity-50 fw-bold" style="font-size: 0.7rem; cursor: not-allowed;" title="Debe marcar la Aprobación Final en Editar" disabled>
-                            <i class="bi bi-lock-fill"></i> En progreso...
-                        </button>
-                    {% endif %}
-                {% endif %}
-            </div>
+    <a href="{% url 'generar_pdf_proceso' proceso.pk %}" class="btn btn-outline-danger btn-sm" title="Descargar PDF" target="_blank">
+        <i class="bi bi-file-earmark-pdf-fill fs-5"></i>
+    </a>
+
+    {% if proceso.estado == 'taller' %}
+        {% if proceso.aprobacion_taller %}
+            <a href="#" onclick="confirmarEnvioAdmin(event, '{% url 'finalizar_taller' proceso.pk %}')" class="btn btn-success btn-sm ms-2 shadow-sm fw-bold animate-fade-in" style="font-size: 0.7rem;">
+                <i class="bi bi-send-check-fill"></i> ENVIAR A ADMIN
+            </a>
+        {% else %}
+            <button class="btn btn-secondary btn-sm ms-2 opacity-50 fw-bold" style="font-size: 0.7rem; cursor: not-allowed;" title="Debe marcar la Aprobación Final en Editar" disabled>
+                <i class="bi bi-lock-fill"></i> En progreso...
+            </button>
+        {% endif %}
+    {% endif %}
+</div>
         </td>
     </tr>
     {% empty %}
-    <tr><td colspan="5" class="text-center py-5 text-muted">No hay registros.</td></tr>
+    <tr><td colspan="6" class="text-center py-5 text-muted">No hay registros.</td></tr>
     {% endfor %}
 </tbody>
             </table>
@@ -154,6 +188,16 @@
 </div>
 
 <style>
+    @keyframes pulse-red {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+        .animate-pulse {
+            animation: pulse-red 2s infinite;
+            display: inline-block; 
+        }
+
     .tech-title { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
     .table thead th { border: none; padding: 15px; }
     .table tbody td { border-bottom: 1px solid rgba(0,0,0,0.05); padding: 15px 10px; }
@@ -164,4 +208,53 @@
     .animate-fade-in { animation: fadeIn 0.4s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // 1. Configuración global del Toast
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+    });
+
+    // 2. Escuchar mensajes de Django (Guardar registro, errores, etc.)
+    {% if messages %}
+        {% for message in messages %}
+            Toast.fire({
+                icon: '{% if message.tags == "error" %}error{% elif message.tags == "warning" %}warning{% else %}success{% endif %}',
+                title: '{{ message|escapejs }}'
+            });
+        {% endfor %}
+    {% endif %}
+
+    // 3. Función para confirmar envío a Administración
+    function confirmarEnvioAdmin(event, url) {
+        event.preventDefault(); // Detiene el enlace
+        
+        Swal.fire({
+            title: '<span class="tech-title" style="color: #0d6efd;">¿ENVIAR A ADMIN?</span>',
+            text: "El proceso saldrá de Taller y pasará a revisión final.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="bi bi-send-check"></i> SÍ, ENVIAR',
+            cancelButtonText: 'CANCELAR',
+            background: 'rgba(255, 255, 255, 0.95)',
+            borderRadius: '20px'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = url; // Redirige si confirma
+            }
+        });
+    }
+</script>
 {% endblock %}

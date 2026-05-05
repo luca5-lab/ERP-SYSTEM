@@ -2,7 +2,27 @@
 
 {% block content %}
 <div class="card dashboard-card border-0 shadow-lg p-4">
-    <h5 class="tech-title mb-4 text-dark"><i class="bi bi-clock-history me-2"></i>HISTORIAL DE ACCIONES DEL SISTEMA</h5>
+    <h5 class="tech-title mb-4 text-dark">
+        <i class="bi bi-clock-history me-2"></i>HISTORIAL DE ACCIONES DEL SISTEMA
+    </h5>
+
+    <form method="GET" class="row g-3 mb-4">
+        <div class="col-md-4">
+            <input type="text" name="usuario" class="form-control form-control-sm" placeholder="Buscar por usuario..." value="{{ q_user }}">
+        </div>
+        <div class="col-md-3">
+            <input type="date" name="fecha" class="form-control form-control-sm" value="{{ q_fecha }}">
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary btn-sm w-100">
+                <i class="bi bi-search me-1"></i> Filtrar
+            </button>
+        </div>
+        <div class="col-md-2">
+            <a href="{% url 'lista_acciones' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        </div>
+    </form>
+
     <div class="table-responsive">
         <table class="table table-hover align-middle">
             <thead class="table-dark">
@@ -13,17 +33,44 @@
                 </tr>
             </thead>
             <tbody>
-                {% for a in acciones %}
-                <tr>
-                    <td class="fw-bold text-primary">{{ a.usuario.username|upper }}</td>
-                    <td>{{ a.accion }}</td>
-                    <td class="text-muted small">{{ a.fecha|date:"d/m/Y H:i" }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="3" class="text-center text-muted">No hay registros de actividad aún.</td></tr>
-                {% endfor %}
-            </tbody>
+    {% for a in acciones %}
+    <tr>
+        <td class="fw-bold text-primary">{{ a.usuario.username|upper }}</td>
+        <td>
+            <div class="fw-bold text-dark">{{ a.accion }}</div>
+            {% if a.detalles %}
+            <div class="mt-2 p-2 bg-light border rounded shadow-sm">
+                <code class="text-dark small" style="white-space: pre-wrap; font-family: monospace; line-height: 1;">{{ a.detalles }}</code>
+            </div>
+            {% endif %}
+        </td>
+        <td class="text-muted small">{{ a.fecha|date:"d/m/Y H:i" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3" class="text-center text-muted">No hay registros de actividad aún.</td></tr>
+    {% endfor %}
+</tbody>
         </table>
     </div>
+
+    {% if acciones.has_other_pages %}
+    <nav aria-label="Navegación de historial">
+        <ul class="pagination pagination-sm justify-content-center mt-3">
+            {% if acciones.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ acciones.previous_page_number }}{% if q_user %}&usuario={{ q_user }}{% endif %}{% if q_fecha %}&fecha={{ q_fecha }}{% endif %}">&laquo;</a>
+                </li>
+            {% endif %}
+
+            <li class="page-item active"><span class="page-link">{{ acciones.number }} de {{ acciones.paginator.num_pages }}</span></li>
+
+            {% if acciones.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ acciones.next_page_number }}{% if q_user %}&usuario={{ q_user }}{% endif %}{% if q_fecha %}&fecha={{ q_fecha }}{% endif %}">&raquo;</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
 </div>
 {% endblock %}

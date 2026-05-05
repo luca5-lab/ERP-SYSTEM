@@ -37,7 +37,7 @@
                             <input type="text" class="form-control bg-light border-0 rounded-pill px-3" value="19%" disabled>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-bold">Precio Unitario (Neto)</label>
+                            <label class="form-label fw-bold">Precio Unitario (Neto + IVA)</label>
                             {{ form.precio_unitario }}
                         </div>
                     </div>
@@ -57,67 +57,96 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const inputsPrecio = [
-        document.querySelector('[name="costo_compra"]'),
-        document.querySelector('[name="precio_unitario"]')
-    ];
+    const inputCosto = document.querySelector('[name="costo_compra"]');
+    const inputMargen = document.querySelector('[name="margen_ganancia"]');
+    const inputPrecio = document.querySelector('[name="precio_unitario"]');
+    
+    // --- 1. LIMPIEZA PARA CÁLCULOS (Mantiene decimales) ---
+    function limpiarParaCalculo(valor) {
+        if (!valor) return 0;
+        let v = valor.toString().replace(/\s/g, '').replace('$', '');
+        
+        // Si tiene formato chileno (3.094,22), normalizamos a (3094.22)
+        if (v.includes('.') && v.includes(',')) {
+            v = v.replace(/\./g, '').replace(',', '.');
+        } else if (v.includes(',')) {
+            v = v.replace(',', '.');
+        }
+        
+        return parseFloat(v) || 0;
+    }
 
+    // --- 2. FORMATEO VISUAL (Estilo Chileno) ---
+    function aplicarFormato(input) {
+        let valor = limpiarParaCalculo(input.value);
+        if (valor === 0) return;
+
+        // Formateamos con puntos de miles y coma decimal
+        input.value = valor.toLocaleString('de-DE', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        });
+    }
+
+    // --- 3. RECALCULO DE PRECIO ---
     function recalcularPrecio() {
-    const costo = limpiar(document.querySelector('[name="costo_compra"]').value);
-    const margen = parseFloat(
-        document.querySelector('[name="margen_ganancia"]').value
-    ) || 0;
+    const costo = limpiarParaCalculo(inputCosto.value);
+    const margen = parseFloat(inputMargen.value) || 0;
+    
+    if (!costo) {
+        inputPrecio.value = "";
+        return;
+    }
 
-    if (!costo) return;
-
+    // Neto + Margen
     const precioNeto = costo * (1 + margen / 100);
-    const precioFinal = precioNeto * 1.19;
-
-    document.querySelector('[name="precio_unitario"]').value =
-        Math.round(precioFinal).toLocaleString('de-DE');
+    
+    // Neto + IVA (19%)
+    const precioFinalConIva = precioNeto * 1.19;
+    
+    // IMPORTANTE: Aquí decidimos cuántos decimales mostrar en el input de Precio Unitario
+    // Usamos 2 decimales para que no se pierda la precisión del neto
+    inputPrecio.value = precioFinalConIva.toLocaleString('de-DE', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
 }
 
-function limpiar(valor) {
-    return Number(valor.replace(/\D/g, ''));
-}
-
-document
-    .querySelector('[name="costo_compra"]')
-    .addEventListener('input', recalcularPrecio);
-
-document
-    .querySelector('[name="margen_ganancia"]')
-    .addEventListener('input', recalcularPrecio);
-    // Función que transforma 1000 en 1.000
-    const formatearVisualmente = (input) => {
-        let valor = input.value.replace(/\D/g, ""); // Solo números
-        if (valor !== "") {
-            input.value = new Intl.NumberFormat('de-DE').format(valor);
-        }
-    };
-
-    inputsPrecio.forEach(input => {
-        if (input) {
-            // 1. Formatear apenas carga (muy importante para EDITAR)
-            formatearVisualmente(input);
-
-            // 2. Formatear mientras el usuario escribe
-            input.addEventListener('input', function(e) {
-                formatearVisualmente(e.target);
-            });
-        }
+    // --- EVENTOS ---
+    // Al entrar al campo, quitamos el formato para que sea fácil editar
+    [inputCosto, inputPrecio].forEach(input => {
+        input.addEventListener('focus', function() {
+            this.value = this.value.replace(/\./g, '');
+        });
+        
+        input.addEventListener('blur', function() {
+            aplicarFormato(this);
+        });
     });
 
-    // 3. LIMPIEZA ANTES DE ENVIAR: Quita los puntos para que Django no de error
+    inputCosto.addEventListener('input', recalcularPrecio);
+    inputMargen.addEventListener('input', recalcularPrecio);
+
+    // Formateo inicial
+    if (inputCosto.value) aplicarFormato(inputCosto);
+    if (inputPrecio.value) aplicarFormato(inputPrecio);
+
+    // --- ANTES DE ENVIAR ---
     const form = document.getElementById('articuloForm');
-    form.addEventListener('submit', function() {
-        inputsPrecio.forEach(input => {
-            if (input) {
-                input.value = input.value.replace(/\./g, "");
-            }
-        });
+    form.addEventListener('submit', function(e) {
+        const costoFinal = limpiarParaCalculo(inputCosto.value);
+        const precioFinal = limpiarParaCalculo(inputPrecio.value);
+
+        // Pasamos el valor limpio (con punto decimal) a Django
+        inputCosto.value = costoFinal.toFixed(2);
+        inputPrecio.value = precioFinal.toFixed(2);
+
+        const btn = form.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> PROCESANDO...`;
     });
 });
 </script>

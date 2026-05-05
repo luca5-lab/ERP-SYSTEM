@@ -1,0 +1,512 @@
+{% extends 'usuarios/dashboard.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="text-white fw-bold mb-0">Control de Facturación</h2>
+            <p class="text-white-50">Gestión de cobros, IVA y estados de pago</p>
+        </div>
+        <button type="button" class="btn btn-success btn-lg rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
+                data-bs-toggle="modal" data-bs-target="#modalFactura" 
+                style="width: 60px; height: 60px;">
+            <i class="bi bi-plus-lg fs-3"></i>
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius: 20px;">
+        <div class="card-body p-4">
+            <form method="GET" class="row g-3 mb-4">
+
+<div class="col-md-3">
+<label class="form-label">N° Factura</label>
+<input type="text" name="n_factura" class="form-control"
+value="{{ n_factura }}" placeholder="Buscar número">
+</div>
+
+<div class="col-md-3">
+<label class="form-label">Fecha facturación</label>
+<input type="date" name="fecha" class="form-control"
+value="{{ fecha }}">
+</div>
+
+<div class="col-md-3">
+<label class="form-label">RUT Cliente</label>
+<input type="text" name="rut" class="form-control"
+value="{{ rut }}" placeholder="Buscar RUT">
+</div>
+
+<div class="col-md-3">
+<label class="form-label">Total facturado</label>
+<input type="text" name="total" class="form-control"
+value="{{ total }}" placeholder="Monto">
+</div>
+
+<div class="col-12 d-flex gap-2">
+
+<button type="submit" class="btn btn-dark">
+<i class="bi bi-search"></i> Buscar
+</button>
+
+<a href="{% url 'lista_facturas' %}" class="btn btn-secondary">
+Limpiar
+</a>
+
+</div>
+
+</form>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="bg-light">
+                        <tr class="text-muted small text-uppercase">
+                            <th>N° Factura</th>
+                            <th>Fecha facturacion</th>
+                            <th>Vencimiento</th>
+                            <th>Cliente / RUT</th>
+                            <th>Formas de pago</th> <th>Cond. pago</th>
+                            <th>Total facturado</th>
+                            <th>Abonado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    {% for f in facturas %}
+    <tr>
+        <td class="fw-bold text-primary">#{{ f.n_factura }}</td>
+        <td>{{ f.fecha_facturacion|date:"d/m/Y" }}</td>
+        <td>
+    <div class="d-flex flex-column">
+        <span class="small fw-bold">{{ f.fecha_vencimiento|date:"d/m/Y" }}</span>
+        
+        {% if f.estado_pago == 'pagado' %}
+            <small class="text-success text-uppercase" style="font-size: 0.7rem;">Finalizado</small>
+        {% elif f.estado_vencimiento == 'atrasada' %}
+            <span class="badge bg-danger animate__animated animate__pulse animate__infinite" style="font-size: 0.65rem;">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> ATRASADA
+            </span>
+        {% else %}
+            <small class="text-muted text-uppercase" style="font-size: 0.7rem;">En plazo</small>
+        {% endif %}
+    </div>
+</td>
+        <td>
+            <div class="d-flex flex-column">
+                <span class="fw-bold">{{ f.cliente.razon_social }}</span>
+                <small class="text-muted">{{ f.cliente.rut }}</small>
+            </div>
+        </td>
+        <td>
+            <span class="badge rounded-pill bg-light text-dark border px-3">
+                <i class="bi bi-clock-history me-1 text-primary"></i>
+                {{ f.cliente.get_condiciones_pago_display }}
+            </span>
+        </td>
+        <td>
+            {% if f.estado_pago == 'pagado' %}
+                <span class="badge bg-success-subtle text-success border border-success px-3">PAGADO</span>
+            {% elif f.estado_pago == 'abonado' %}
+                <span class="badge bg-info-subtle text-info border border-info px-3">ABONADO</span>
+            {% else %}
+                <span class="badge bg-danger-subtle text-danger border border-danger px-3">PENDIENTE</span>
+            {% endif %}
+        </td>
+        <td>
+            <div class="d-flex flex-column">
+                <span>${{ f.total_facturado }}</span>
+            </div>
+        </td>
+        <td class="text-success fw-bold">${{ f.valor_abonado }}</td>
+        
+        <td class="text-center">
+            <div class="btn-group">
+                {% if f.archivo_pdf %}
+                <a href="{{ f.archivo_pdf.url }}" target="_blank" class="btn btn-sm btn-outline-danger shadow-sm" title="Ver PDF">
+                    <i class="bi bi-file-pdf"></i>
+                </a>
+                {% endif %}
+                <button class="btn btn-sm btn-outline-dark shadow-sm btn-editar" 
+        title="Editar"
+        data-bs-toggle="modal" 
+        data-bs-target="#modalFactura"
+        data-id="{{ f.id }}"
+        data-nfactura="{{ f.n_factura }}"
+        data-fecha="{{ f.fecha_facturacion|date:'Y-m-d' }}"
+        data-cliente="{{ f.cliente.id }}"
+        data-total="{{ f.total_facturado|stringformat:'f' }}"
+        data-estado="{{ f.estado_pago }}"
+        data-abonado="{{ f.valor_abonado|stringformat:'f' }}"
+        data-origen="{{ f.origen_id|default:'' }}"
+        data-tipo="{{ f.tipo|default:'' }}"> <i class="bi bi-pencil"></i>
+</button>
+            </div>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="9" class="text-center py-5 text-muted">
+            <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>
+            No hay facturas registradas. Haz clic en el botón <b>+</b> para agregar una.
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+                </table>
+                {% if facturas.paginator.num_pages > 1 %}
+<div class="d-flex justify-content-center mt-4">
+<nav>
+<ul class="pagination pagination-sm">
+
+{% if facturas.has_previous %}
+<li class="page-item">
+<a class="page-link"
+href="?page={{ facturas.previous_page_number }}&n_factura={{ n_factura }}&fecha={{ fecha }}&rut={{ rut }}&total={{ total }}">
+<i class="bi bi-chevron-left"></i>
+</a>
+</li>
+{% endif %}
+
+{% for num in facturas.paginator.page_range %}
+
+{% if facturas.number == num %}
+<li class="page-item active">
+<span class="page-link">{{ num }}</span>
+</li>
+
+{% else %}
+<li class="page-item">
+<a class="page-link"
+href="?page={{ num }}&n_factura={{ n_factura }}&fecha={{ fecha }}&rut={{ rut }}&total={{ total }}">
+{{ num }}
+</a>
+</li>
+{% endif %}
+
+{% endfor %}
+
+{% if facturas.has_next %}
+<li class="page-item">
+<a class="page-link"
+href="?page={{ facturas.next_page_number }}&n_factura={{ n_factura }}&fecha={{ fecha }}&rut={{ rut }}&total={{ total }}">
+<i class="bi bi-chevron-right"></i>
+</a>
+</li>
+{% endif %}
+
+</ul>
+</nav>
+</div>
+{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalFactura" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0" style="border-radius: 20px;">
+            <div class="modal-header bg-dark text-white" style="border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-plus me-2"></i>Nueva Factura</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="factura_id" id="factura_id">
+                <div class="modal-body p-4">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label fw-bold small text-uppercase text-muted">Número de Factura</label>
+            {{ form.n_factura }}
+        </div>
+        <div class="col-md-6">
+            <label class="form-label fw-bold small text-uppercase text-muted">Fecha de Facturación</label>
+            {{ form.fecha_facturacion }}
+        </div>
+
+        <div class="col-12">
+            <label class="form-label fw-bold small text-uppercase text-muted">Cliente</label>
+            {{ form.cliente }}
+        </div>
+
+        <div class="col-md-8">
+            <label class="form-label fw-bold small text-uppercase text-muted">Formas de pago</label>
+            {{ form.condicion_pago_display }}
+        </div>
+        <div class="col-md-4">
+            <label class="form-label fw-bold small text-uppercase text-muted">Total Facturado</label>
+            {{ form.total_facturado }}
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label fw-bold small text-uppercase text-muted">Estado de Pago</label>
+            {{ form.estado_pago }}
+        </div>
+        <div class="col-md-4">
+            <label class="form-label fw-bold small text-uppercase text-muted">Valor Abonado</label>
+            {{ form.valor_abonado }}
+        </div>
+       <div class="col-md-4">
+    <label class="form-label fw-bold small text-uppercase text-muted">Vincular Cotizaciones</label>
+    <select name="origen_ids" id="id_origen_id" class="form-select shadow-sm" multiple style="height: 120px;">
+        <option value="">Sin vincular</option>
+        
+        <optgroup label="SERVICIOS">
+            {% for c in cotizaciones_servicios %}
+                <option value="{{ c.id }}" data-tipo="servicio" data-cliente="{{ c.cliente.id }}">
+                    #{{ c.get_numero_formateado }} - {{ c.cliente.razon_social|truncatechars:15 }}
+                </option>
+            {% endfor %}
+        </optgroup>
+
+        <optgroup label="ARTÍCULOS">
+            {% for a in cotizaciones_articulos %}
+                <option value="{{ a.n_presupuesto|stringformat:'s' }}" data-tipo="articulo" data-cliente="{{ a.cliente.id }}"> 
+                    #{{ a.get_numero_formateado }} - {{ a.cliente.razon_social|truncatechars:15 }}
+                </option>
+            {% endfor %}
+        </optgroup>
+    </select>
+    <input type="hidden" name="tipo" id="id_tipo_origen">
+    <div class="form-text small">Ctrl + Click para seleccionar varias.</div>
+</div>
+        <div class="col-12">
+            <label class="form-label fw-bold small text-uppercase text-muted">Adjuntar PDF de Factura</label>
+            {{ form.archivo_pdf }}
+            
+            <div id="pdf-feedback"></div>
+
+            {% if form.archivo_pdf.errors %}
+                <div class="text-danger small mt-1">
+                    {{ form.archivo_pdf.errors }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+                <div class="modal-footer border-0 bg-light" style="border-radius: 0 0 20px 20px;">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" id="btnGuardarFactura" class="btn btn-primary rounded-pill px-4 shadow">
+                        <i class="bi bi-cloud-arrow-up me-2"></i>
+                        <span id="btnText">Guardar Factura</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 1. NOTIFICACIONES SWAL ---
+    {% if messages %}
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3500,
+        timerProgressBar: true
+    });
+    {% for message in messages %}
+        Toast.fire({ icon: 'success', title: "{{ message }}" });
+    {% endfor %}
+    {% endif %}
+
+    // --- 2. DICCIONARIO DE CLIENTES ---
+    const datosClientes = {
+        {% for c in clientes %} "{{ c.id }}": "{{ c.get_condiciones_pago_display }}", {% endfor %}
+    };
+
+    // --- 3. FUNCIONES DE APOYO ---
+    function actualizarCondicion() {
+        const selectCliente = document.getElementById('id_cliente');
+        const inputCondicion = document.getElementById('id_condicion_pago_display');
+        if (selectCliente && inputCondicion) {
+            const clienteId = selectCliente.value;
+            inputCondicion.value = datosClientes[clienteId] || "---";
+        }
+    }
+
+    // --- 4. MANEJO DEL MODAL ---
+    const elModal = document.getElementById('modalFactura');
+    
+    if (elModal) {
+        elModal.addEventListener('show.bs.modal', function (event) {
+            const btn = event.relatedTarget;
+            const pdfFeedback = document.getElementById('pdf-feedback');
+            const tituloModal = this.querySelector('.modal-title');
+            const inputId = document.getElementById('factura_id');
+            const form = this.querySelector('form');
+            const inputPdf = document.getElementById('id_archivo_pdf');
+            const selectOrigen = document.getElementById('id_origen_id');
+            const inputTipo = document.getElementById('id_tipo_origen');
+            const selectCliente = document.getElementById('id_cliente');
+            const btnGuardar = document.getElementById('btnGuardarFactura');
+
+            // Resetear estado del botón por si quedó deshabilitado
+            if (btnGuardar) {
+                btnGuardar.disabled = false;
+                btnGuardar.innerHTML = '<i class="bi bi-cloud-arrow-up me-2"></i>Guardar Factura';
+            }
+
+            if (btn && btn.classList.contains('btn-editar')) {
+                // CASO A: EDITAR
+                tituloModal.innerHTML = '<i class="bi bi-pencil-square me-2"></i>Editar Factura';
+                
+                inputId.value = btn.dataset.id;
+                document.getElementById('id_n_factura').value = btn.dataset.nfactura;
+                document.getElementById('id_fecha_facturacion').value = btn.dataset.fecha;
+                document.getElementById('id_estado_pago').value = btn.dataset.estado;
+
+                const clienteId = btn.dataset.cliente;
+                if (selectCliente) {
+                    selectCliente.value = clienteId;
+                }
+
+                // --- FILTRADO FORZADO INMEDIATO ---
+                if (selectOrigen) {
+                    const opciones = selectOrigen.querySelectorAll('option');
+                    opciones.forEach(opt => {
+                        if (opt.value === "") {
+                            opt.style.display = "block";
+                        } else if (opt.getAttribute('data-cliente') === clienteId) {
+                            opt.style.display = "block";
+                        } else {
+                            opt.style.display = "none";
+                            opt.selected = false; 
+                        }
+                    });
+                    
+                    // Ocultar grupos vacíos también aquí
+                    selectOrigen.querySelectorAll('optgroup').forEach(g => {
+                        const tieneVisibles = Array.from(g.children).some(o => o.style.display === "block");
+                        g.style.display = tieneVisibles ? "block" : "none";
+                    });
+                }
+
+                // Cargar montos
+                const t = btn.dataset.total.replace(',', '.');
+                const a = btn.dataset.abonado.replace(',', '.');
+                document.getElementById('id_total_facturado').value = parseFloat(t) || 0;
+                document.getElementById('id_valor_abonado').value = parseFloat(a) || 0;
+
+                // Marcar las seleccionadas
+                const origenData = btn.dataset.origen || ""; 
+                const idsBuscados = origenData.split(',').map(s => s.trim()).filter(s => s !== ""); 
+                
+                if (selectOrigen) {
+                    Array.from(selectOrigen.options).forEach(opt => {
+                        if (idsBuscados.includes(opt.value)) {
+                            opt.selected = true;
+                        }
+                    });
+                }
+
+                if (inputTipo) inputTipo.value = btn.dataset.tipo || "";
+                
+                if (pdfFeedback) {
+                    pdfFeedback.innerHTML = '<div class="alert alert-info py-1 px-2 mt-2" style="font-size: 0.75rem;"><i class="bi bi-info-circle me-1"></i> Opcional: Sube uno nuevo para reemplazar el actual.</div>';
+                }
+                if (inputPdf) inputPdf.required = false;
+
+            
+
+            } else {
+                // CASO B: NUEVO
+                tituloModal.innerHTML = '<i class="bi bi-file-earmark-plus me-2"></i>Nueva Factura';
+                
+                if (form) form.reset();
+                inputId.value = ""; 
+                
+                // Limpiar selección y resetear visibilidad
+                if (selectOrigen) {
+                    Array.from(selectOrigen.options).forEach(opt => {
+                        opt.selected = false;
+                        opt.style.display = "block";
+                    });
+                    // Resetear optgroups
+                    selectOrigen.querySelectorAll('optgroup').forEach(g => g.style.display = "block");
+                }
+                
+                if (inputTipo) inputTipo.value = ""; 
+
+                if (pdfFeedback) {
+                    pdfFeedback.innerHTML = '<div class="text-danger fw-bold mt-2" style="font-size: 0.75rem;"><i class="bi bi-exclamation-circle me-1"></i> El PDF es obligatorio.</div>';
+                }
+                if (inputPdf) inputPdf.required = true;
+            }
+            
+            // Actualizar el texto de la condición de pago
+            actualizarCondicion();
+        });
+    }
+
+   // --- 5. EVENTOS DE CAMBIO ---
+document.addEventListener('change', function(e) {
+    // Cuando cambia el cliente
+    if (e.target && e.target.id === 'id_cliente') {
+        actualizarCondicion();
+
+        const clienteId = e.target.value;
+        const selectOrigen = document.getElementById('id_origen_id');
+
+        if (selectOrigen) {
+            const opciones = selectOrigen.querySelectorAll('option');
+            opciones.forEach(opt => {
+                // La opción vacía siempre se muestra
+                if (opt.value === "") {
+                    opt.style.display = "block";
+                    return;
+                }
+
+                // FILTRO: Si el data-cliente de la opción coincide con el cliente elegido
+                if (opt.getAttribute('data-cliente') === clienteId) {
+                    opt.style.display = "block";
+                } else {
+                    opt.style.display = "none";
+                    opt.selected = false; // Desmarcamos para que no se envíen datos erróneos
+                }
+            });
+
+            // Si estamos creando una factura nueva (id vacío), reseteamos la selección
+            const inputId = document.getElementById('factura_id');
+            if (inputId && !inputId.value) {
+                selectOrigen.value = "";
+            }
+        }
+    }
+    
+    // Cuando cambian las cotizaciones seleccionadas (Mantiene tu lógica original de 'tipo')
+    if (e.target && e.target.id === 'id_origen_id') {
+        const selectedOptions = Array.from(e.target.selectedOptions);
+        const inputTipo = document.getElementById('id_tipo_origen');
+        
+        if (inputTipo) {
+            if (selectedOptions.length > 0) {
+                // Obtenemos el tipo (servicio/articulo) del data-tipo de la opción
+                const tipo = selectedOptions[0].getAttribute('data-tipo');
+                inputTipo.value = tipo || "";
+            } else {
+                inputTipo.value = "";
+            }
+        }
+    }
+});
+
+    // --- 6. PREVENCIÓN DE DOBLE ENVÍO (PROTECCIÓN PARA VENTAS) ---
+    const facturaForm = document.querySelector('#modalFactura form');
+    if (facturaForm) {
+        facturaForm.addEventListener('submit', function(e) {
+            const btn = document.getElementById('btnGuardarFactura');
+            
+            // Si el botón ya está deshabilitado, prevenimos cualquier envío extra
+            if (btn.disabled) {
+                e.preventDefault();
+                return false;
+            }
+
+            // Deshabilitamos el botón inmediatamente
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+        });
+    }
+</script>
+{% endblock %}
